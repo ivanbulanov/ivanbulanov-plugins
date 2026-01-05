@@ -1,0 +1,12 @@
+{
+  "name": "acli-jira",
+  "version": "0.1.0",
+  "description": "Retrieve JIRA issues, comments, and attachments using acli CLI with token-efficient output and ADF parsing",
+  "author": {
+    "name": "Ivan Bulanov",
+    "url": "https://github.com/ivanbulanov"
+  },
+  "repository": "https://github.com/ivanbulanov/acli-jira-plugin",
+  "license": "MIT",
+  "keywords": ["jira", "atlassian", "acli", "issue-tracking"]
+}
