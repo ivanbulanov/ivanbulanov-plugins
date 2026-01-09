@@ -1,0 +1,22 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "ivanbulanov-plugins",
+  "description": "Ivan Bulanov's collection of Claude Code plugins for productivity and integrations",
+  "owner": {
+    "name": "Ivan Bulanov",
+    "email": "ivanbulanov@users.noreply.github.com"
+  },
+  "plugins": [
+    {
+      "name": "acli-jira",
+      "description": "Retrieve JIRA issues, comments, and attachments using acli CLI with token-efficient output and ADF parsing",
+      "version": "0.1.0",
+      "author": {
+        "name": "Ivan Bulanov"
+      },
+      "source": "./plugins/acli-jira",
+      "category": "productivity",
+      "homepage": "https://github.com/ivanbulanov/acli-jira-plugin"
+    }
+  ]
+}

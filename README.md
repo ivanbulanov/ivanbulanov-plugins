@@ -1,95 +1,69 @@
-# acli-jira Plugin for Claude Code
+# Ivan Bulanov's Claude Code Plugins
 
-Retrieve JIRA issues, comments, and attachments using the Atlassian CLI (acli) with token-efficient output and intelligent ADF parsing.
+A collection of Claude Code plugins for productivity and integrations.
 
-## Features
+## Available Plugins
 
-- **Token-efficient retrieval**: Uses text output by default (5x smaller than JSON)
-- **Adaptive parsing**: Automatically switches to JSON+ADF parsing when complex content detected
-- **URL parsing**: Extracts issue keys from Atlassian URLs
-- **Full context**: Retrieves issues, comments, and attachments in one flow
-- **ADF to Markdown**: Converts Atlassian Document Format to readable markdown
-
-## Prerequisites
-
-- [Atlassian CLI (acli)](https://developer.atlassian.com/cloud/acli/) installed and authenticated
-- Claude Code
-
-### Installing acli
-
-```bash
-# macOS
-brew install atlassian/tap/acli
-
-# Linux/Windows
-# Download from https://developer.atlassian.com/cloud/acli/guides/install-acli/
-```
-
-### Authenticating acli
-
-```bash
-acli jira auth
-```
+| Plugin | Description | Category |
+|--------|-------------|----------|
+| [acli-jira](./plugins/acli-jira) | Retrieve JIRA issues using acli CLI with token-efficient output and ADF parsing | Productivity |
 
 ## Installation
 
-### From GitHub
+### 1. Add the marketplace
 
 ```bash
-# Clone the repository
-git clone https://github.com/ivanbulanov/acli-jira-plugin.git
-
-# Use with Claude Code
-claude --plugin-dir /path/to/acli-jira-plugin
+claude plugin marketplace add ivanbulanov/acli-jira-plugin
 ```
 
-### As a local plugin
-
-Copy to your Claude Code plugins directory:
+### 2. Install a plugin
 
 ```bash
-cp -r acli-jira-plugin ~/.claude/plugins/
+claude plugin install acli-jira@ivanbulanov-plugins
 ```
 
-## Usage
+### 3. Enable the plugin
 
-The skill triggers automatically when you:
-
-- Ask about a JIRA issue: "What does DEV-123 say?"
-- Paste a JIRA URL: "https://yoursite.atlassian.net/browse/DEV-123"
-- Request issue details: "Get the full context for ticket ABC-456"
-- Need comments: "Show me the comments on PROJ-789"
-
-### Example Prompts
-
-```
-Fetch JIRA issue DEV-5152
+```bash
+claude plugin enable acli-jira@ivanbulanov-plugins
 ```
 
-```
-https://social.atlassian.net/browse/DEV-5152 - summarize this ticket
+### 4. Restart Claude Code
+
+Restart your Claude Code session to load the new plugin.
+
+## Updating
+
+```bash
+claude plugin marketplace update ivanbulanov-plugins
+claude plugin update acli-jira@ivanbulanov-plugins
 ```
 
-```
-Get comments and attachments for ABC-123
-```
+## Plugin Development
 
-## Skill Structure
+This repository follows the Claude Code marketplace structure:
 
 ```
-skills/
-└── jira-retrieval/
-    ├── SKILL.md              # Main skill instructions
-    ├── references/
-    │   ├── adf-format.md     # ADF structure guide
-    │   ├── acli-commands.md  # acli quick reference
-    │   └── field-mappings.md # JIRA field reference
-    ├── scripts/
-    │   └── adf-to-markdown.sh # ADF converter
-    └── examples/
-        ├── basic-retrieval.md
-        └── full-context.md
+.
+├── .claude-plugin/
+│   └── marketplace.json    # Marketplace manifest
+├── plugins/
+│   └── <plugin-name>/      # Individual plugins
+│       ├── .claude-plugin/
+│       │   └── plugin.json
+│       ├── skills/         # Plugin skills
+│       └── README.md
+├── README.md
+└── LICENSE
 ```
+
+To add a new plugin:
+
+1. Create a directory under `plugins/`
+2. Add `.claude-plugin/plugin.json` with plugin metadata
+3. Add skills, commands, or hooks as needed
+4. Update `marketplace.json` to include the new plugin
+5. Validate with `claude plugin validate .`
 
 ## License
 
