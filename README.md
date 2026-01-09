@@ -13,7 +13,7 @@ A collection of Claude Code plugins for productivity and integrations.
 ### 1. Add the marketplace
 
 ```bash
-claude plugin marketplace add ivanbulanov/acli-jira-plugin
+claude plugin marketplace add ivanbulanov/ivanbulanov-plugins
 ```
 
 ### 2. Install a plugin
