@@ -16,7 +16,7 @@
       },
       "source": "./plugins/acli-jira",
       "category": "productivity",
-      "homepage": "https://github.com/ivanbulanov/acli-jira-plugin"
+      "homepage": "https://github.com/ivanbulanov/ivanbulanov-plugins/tree/master/plugins/acli-jira"
     }
   ]
 }
