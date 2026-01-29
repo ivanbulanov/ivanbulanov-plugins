@@ -89,6 +89,9 @@ redis_cluster="false"
 matched_vars=0
 
 while IFS= read -r line || [[ -n "$line" ]]; do
+  # Strip carriage returns (Windows-style line endings)
+  line="${line//$'\r'/}"
+
   # Skip comments and empty lines
   [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
 
