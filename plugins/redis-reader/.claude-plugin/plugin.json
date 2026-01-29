@@ -1,0 +1,12 @@
+{
+  "name": "redis-reader",
+  "version": "0.1.0",
+  "description": "Read-only Redis querying skill using redis-cli with command allowlisting, output size control, and cluster support",
+  "author": {
+    "name": "Ivan Bulanov",
+    "url": "https://github.com/ivanbulanov"
+  },
+  "repository": "https://github.com/ivanbulanov/ivanbulanov-plugins",
+  "license": "MIT",
+  "keywords": ["redis", "cache", "debugging", "read-only", "session"]
+}

@@ -17,6 +17,17 @@
       "source": "./plugins/acli-jira",
       "category": "productivity",
       "homepage": "https://github.com/ivanbulanov/ivanbulanov-plugins/tree/master/plugins/acli-jira"
+    },
+    {
+      "name": "redis-reader",
+      "description": "Read-only Redis querying skill using redis-cli with command allowlisting, output size control, and cluster support",
+      "version": "0.1.0",
+      "author": {
+        "name": "Ivan Bulanov"
+      },
+      "source": "./plugins/redis-reader",
+      "category": "productivity",
+      "homepage": "https://github.com/ivanbulanov/ivanbulanov-plugins/tree/master/plugins/redis-reader"
     }
   ]
 }
