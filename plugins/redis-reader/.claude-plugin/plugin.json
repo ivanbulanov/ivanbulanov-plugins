@@ -1,6 +1,6 @@
 {
   "name": "redis-reader",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Read-only Redis querying skill using redis-cli with command allowlisting, output size control, and cluster support",
   "author": {
     "name": "Ivan Bulanov",
