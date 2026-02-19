@@ -2,9 +2,11 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
+	"github.com/ctreminiom/go-atlassian/v2/pkg/infra/models"
 	"github.com/spf13/cobra"
 
 	"github.com/ivanbulanov/ivanbulanov-plugins/plugins/atlassian-cloud/cli/internal/auth"
@@ -111,11 +113,26 @@ func runJiraIssueGet(_ *cobra.Command, args []string) error {
 		fmt.Print(output.FormatComments(issue.Fields.Comment.Comments))
 	}
 
-	// TODO: Jira V2 model (IssueFieldsSchemeV2) lacks an Attachment field.
-	// Attachments require either the V3 client or custom JSON parsing.
-	// The "attachment" field is requested from the API but not captured by the struct.
+	if issueAttachments || issueAllFields {
+		attachments := extractAttachments(response.Bytes.Bytes())
+		fmt.Print(output.FormatAttachments(attachments))
+	}
 
 	return nil
+}
+
+// extractAttachments parses attachment data from the raw Jira API response.
+// IssueFieldsSchemeV2 lacks an Attachment field, so we extract it directly from JSON.
+func extractAttachments(data []byte) []*models.IssueAttachmentScheme {
+	var raw struct {
+		Fields struct {
+			Attachment []*models.IssueAttachmentScheme `json:"attachment"`
+		} `json:"fields"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil
+	}
+	return raw.Fields.Attachment
 }
 
 func runJiraSearch(_ *cobra.Command, args []string) error {
