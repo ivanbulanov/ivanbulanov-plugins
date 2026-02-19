@@ -93,18 +93,16 @@ func convertNode(sb *strings.Builder, node adfNode, prefix string) {
 	case "bulletList":
 		for _, item := range node.Content {
 			if item.Type == "listItem" {
-				for _, child := range item.Content {
-					convertNode(sb, child, "- ")
-				}
+				convertListItem(sb, item.Content, prefix+"- ", prefix+"  ")
 			}
 		}
 
 	case "orderedList":
 		for i, item := range node.Content {
 			if item.Type == "listItem" {
-				for _, child := range item.Content {
-					convertNode(sb, child, fmt.Sprintf("%d. ", i+1))
-				}
+				marker := fmt.Sprintf("%s%d. ", prefix, i+1)
+				indent := prefix + strings.Repeat(" ", len(fmt.Sprintf("%d. ", i+1)))
+				convertListItem(sb, item.Content, marker, indent)
 			}
 		}
 
@@ -146,6 +144,16 @@ func convertNode(sb *strings.Builder, node adfNode, prefix string) {
 	default:
 		for _, child := range node.Content {
 			convertNode(sb, child, prefix)
+		}
+	}
+}
+
+func convertListItem(sb *strings.Builder, children []adfNode, marker, indent string) {
+	for i, child := range children {
+		if i == 0 {
+			convertNode(sb, child, marker)
+		} else {
+			convertNode(sb, child, indent)
 		}
 	}
 }
@@ -218,9 +226,10 @@ func convertTable(sb *strings.Builder, node adfNode) {
 			sb.WriteString(" ")
 			var cellBuf strings.Builder
 			for _, child := range cell.Content {
-				convertInlineContent(&cellBuf, child.Content)
+				convertNode(&cellBuf, child, "")
 			}
-			sb.WriteString(strings.TrimSpace(cellBuf.String()))
+			cellText := strings.ReplaceAll(cellBuf.String(), "\n", " ")
+			sb.WriteString(strings.TrimSpace(cellText))
 			sb.WriteString(" |")
 		}
 		sb.WriteString("\n")

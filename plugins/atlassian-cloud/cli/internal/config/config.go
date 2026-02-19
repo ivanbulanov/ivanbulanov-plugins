@@ -9,6 +9,11 @@ import (
 
 const appName = "atlassian-cloud"
 
+const (
+	AuthMethodOAuth2 = "oauth2"
+	AuthMethodToken  = "token"
+)
+
 type AuthConfig struct {
 	DefaultSite string              `json:"default_site"`
 	Sites       map[string]SiteAuth `json:"sites"`

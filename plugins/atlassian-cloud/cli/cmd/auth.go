@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -44,10 +45,9 @@ var (
 
 func init() {
 	authTokenCmd.Flags().StringVar(&tokenEmail, "email", "", "Atlassian account email")
-	authTokenCmd.Flags().StringVar(&tokenToken, "token", "", "Atlassian API token")
+	authTokenCmd.Flags().StringVar(&tokenToken, "token", "", "Atlassian API token (or set ATLASSIAN_API_TOKEN)")
 	authTokenCmd.Flags().StringVar(&tokenSite, "site", "", "Atlassian site (e.g. mycompany.atlassian.net)")
 	_ = authTokenCmd.MarkFlagRequired("email")
-	_ = authTokenCmd.MarkFlagRequired("token")
 	_ = authTokenCmd.MarkFlagRequired("site")
 
 	authCmd.AddCommand(authLoginCmd)
@@ -81,7 +81,7 @@ func runAuthLogin(_ *cobra.Command, _ []string) error {
 
 	for _, resource := range result.Resources {
 		cfg.Sites[resource.Name] = config.SiteAuth{
-			Method:       "oauth2",
+			Method:       config.AuthMethodOAuth2,
 			AccessToken:  result.Token.AccessToken,
 			RefreshToken: result.Token.RefreshToken,
 			TokenExpiry:  time.Now().Add(time.Duration(result.Token.ExpiresIn) * time.Second).Format(time.RFC3339),
@@ -105,15 +105,23 @@ func runAuthLogin(_ *cobra.Command, _ []string) error {
 }
 
 func runAuthToken(_ *cobra.Command, _ []string) error {
+	token := tokenToken
+	if token == "" {
+		token = os.Getenv("ATLASSIAN_API_TOKEN")
+	}
+	if token == "" {
+		return fmt.Errorf("API token required: use --token flag or ATLASSIAN_API_TOKEN env var")
+	}
+
 	cfg, err := config.LoadAuthConfig()
 	if err != nil {
 		return fmt.Errorf("cannot load auth config: %w", err)
 	}
 
 	cfg.Sites[tokenSite] = config.SiteAuth{
-		Method:   "token",
+		Method:   config.AuthMethodToken,
 		Email:    tokenEmail,
-		APIToken: tokenToken,
+		APIToken: token,
 	}
 
 	if cfg.DefaultSite == "" {
@@ -143,7 +151,7 @@ func runAuthStatus(_ *cobra.Command, _ []string) error {
 	fmt.Printf("Default site: %s\n\n", cfg.DefaultSite)
 	for name, site := range cfg.Sites {
 		status := "valid"
-		if site.Method == "oauth2" && site.TokenExpiry != "" {
+		if site.Method == config.AuthMethodOAuth2 && site.TokenExpiry != "" {
 			expiry, parseErr := time.Parse(time.RFC3339, site.TokenExpiry)
 			if parseErr == nil && time.Now().After(expiry) {
 				status = "expired (will refresh on next use)"

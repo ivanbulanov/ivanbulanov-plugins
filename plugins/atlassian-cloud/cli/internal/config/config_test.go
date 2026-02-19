@@ -34,7 +34,7 @@ func TestAuthConfigRoundTrip(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", tmpDir)
 
 	site := SiteAuth{
-		Method:       "oauth2",
+		Method:       AuthMethodOAuth2,
 		AccessToken:  "test-access",
 		RefreshToken: "test-refresh",
 		TokenExpiry:  "2026-02-19T15:30:00Z",

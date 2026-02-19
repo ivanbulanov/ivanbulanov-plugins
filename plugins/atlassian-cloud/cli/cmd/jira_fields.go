@@ -26,7 +26,7 @@ func init() {
 }
 
 func runJiraFieldsList(_ *cobra.Command, _ []string) error {
-	clients, err := auth.NewClients(siteName)
+	clients, err := auth.NewClients(resolveSite(""))
 	if err != nil {
 		return err
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/ctreminiom/go-atlassian/v2/pkg/infra/models"
 	"github.com/spf13/cobra"
@@ -102,16 +103,16 @@ func runConfluencePageGet(_ *cobra.Command, args []string) error {
 }
 
 func runConfluenceSearch(_ *cobra.Command, args []string) error {
-	clients, err := auth.NewClients(siteName)
+	clients, err := auth.NewClients(resolveSite(""))
 	if err != nil {
 		return err
 	}
 
 	cql := `type = page`
 	if searchSpace != "" {
-		cql += fmt.Sprintf(` AND space = "%s"`, searchSpace)
+		cql += fmt.Sprintf(` AND space = "%s"`, escapeCQL(searchSpace))
 	}
-	cql += fmt.Sprintf(` AND text ~ "%s"`, args[0])
+	cql += fmt.Sprintf(` AND text ~ "%s"`, escapeCQL(args[0]))
 
 	results, _, err := clients.ConfluenceV1.Search.Content(context.Background(), cql, &models.SearchContentOptions{
 		Limit: searchMaxConf,
@@ -122,4 +123,10 @@ func runConfluenceSearch(_ *cobra.Command, args []string) error {
 
 	fmt.Print(output.FormatSearchResultsConfluence(results.Results, results.TotalSize))
 	return nil
+}
+
+func escapeCQL(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `"`, `\"`)
+	return s
 }

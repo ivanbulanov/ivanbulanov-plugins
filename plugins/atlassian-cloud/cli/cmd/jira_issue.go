@@ -3,7 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -83,6 +83,11 @@ func runJiraIssueGet(_ *cobra.Command, args []string) error {
 	if issueAttachments || issueAllFields {
 		fields = append(fields, "attachment")
 	}
+	if issueFields != "" {
+		for _, f := range strings.Split(issueFields, ",") {
+			fields = append(fields, strings.TrimSpace(f))
+		}
+	}
 
 	issue, response, err := clients.Jira.Issue.Get(context.Background(), ref.IssueKey, fields, nil)
 	if err != nil {
@@ -90,8 +95,7 @@ func runJiraIssueGet(_ *cobra.Command, args []string) error {
 			return fmt.Errorf("issue %s not found", ref.IssueKey)
 		}
 		if response != nil && response.Code == 401 {
-			fmt.Fprintln(os.Stderr, "Authentication failed. Run: atlassian-cloud auth login")
-			os.Exit(auth.ExitCodeAuthRequired)
+			return &auth.AuthRequiredError{Message: "authentication failed; run: atlassian-cloud auth login"}
 		}
 		return fmt.Errorf("cannot get issue: %w", err)
 	}
@@ -106,15 +110,15 @@ func runJiraIssueGet(_ *cobra.Command, args []string) error {
 		fmt.Print(output.FormatComments(issue.Fields.Comment.Comments))
 	}
 
-	if issueAttachments || issueAllFields {
-		fmt.Println("\n*Use --attachments with a follow-up to list attachment details*")
-	}
+	// TODO: Jira V2 model (IssueFieldsSchemeV2) lacks an Attachment field.
+	// Attachments require either the V3 client or custom JSON parsing.
+	// The "attachment" field is requested from the API but not captured by the struct.
 
 	return nil
 }
 
 func runJiraSearch(_ *cobra.Command, args []string) error {
-	clients, err := auth.NewClients(siteName)
+	clients, err := auth.NewClients(resolveSite(""))
 	if err != nil {
 		return err
 	}

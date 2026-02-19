@@ -1,10 +1,13 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
+
+	"github.com/ivanbulanov/ivanbulanov-plugins/plugins/atlassian-cloud/cli/internal/auth"
 )
 
 var siteName string
@@ -22,6 +25,10 @@ func init() {
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
+		var authErr *auth.AuthRequiredError
+		if errors.As(err, &authErr) {
+			os.Exit(auth.ExitCodeAuthRequired)
+		}
 		os.Exit(1)
 	}
 }

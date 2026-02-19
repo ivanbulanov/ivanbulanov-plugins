@@ -22,6 +22,13 @@ const (
 	tokenExpiryBuffer = 5 * time.Minute
 )
 
+// AuthRequiredError indicates that authentication is missing or expired.
+type AuthRequiredError struct {
+	Message string
+}
+
+func (e *AuthRequiredError) Error() string { return e.Message }
+
 // Clients bundles authenticated Jira and Confluence API clients for a single site.
 type Clients struct {
 	Jira         *jira.Client
@@ -42,20 +49,18 @@ func NewClients(site string) (*Clients, error) {
 		site = cfg.DefaultSite
 	}
 	if site == "" {
-		fmt.Fprintln(os.Stderr, "Not authenticated. Run: atlassian-cloud auth login")
-		os.Exit(ExitCodeAuthRequired)
+		return nil, &AuthRequiredError{Message: "not authenticated; run: atlassian-cloud auth login"}
 	}
 
 	siteAuth, ok := cfg.Sites[site]
 	if !ok {
-		fmt.Fprintf(os.Stderr, "No credentials for site %q. Run: atlassian-cloud auth login\n", site)
-		os.Exit(ExitCodeAuthRequired)
+		return nil, &AuthRequiredError{Message: fmt.Sprintf("no credentials for site %q; run: atlassian-cloud auth login", site)}
 	}
 
 	switch siteAuth.Method {
-	case "oauth2":
+	case config.AuthMethodOAuth2:
 		return newOAuth2Clients(cfg, site, &siteAuth)
-	case "token":
+	case config.AuthMethodToken:
 		return newTokenClients(site, &siteAuth)
 	default:
 		return nil, fmt.Errorf("unknown auth method %q for site %q", siteAuth.Method, site)
@@ -117,7 +122,9 @@ func refreshTokenIfNeeded(cfg *config.AuthConfig, site string, siteAuth *config.
 	}
 
 	expiry, err := time.Parse(time.RFC3339, siteAuth.TokenExpiry)
-	if err != nil || !time.Now().Add(tokenExpiryBuffer).After(expiry) {
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: cannot parse token expiry %q, attempting refresh\n", siteAuth.TokenExpiry)
+	} else if !time.Now().Add(tokenExpiryBuffer).After(expiry) {
 		return siteAuth.AccessToken, nil
 	}
 
