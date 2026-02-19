@@ -122,9 +122,9 @@ func TestExtractAttachments(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := extractAttachments([]byte(tt.data))
+			got := ExtractAttachments([]byte(tt.data))
 			if len(got) != len(tt.expected) {
-				t.Fatalf("extractAttachments: got %d attachments, want %d", len(got), len(tt.expected))
+				t.Fatalf("ExtractAttachments: got %d attachments, want %d", len(got), len(tt.expected))
 			}
 			for i := range got {
 				if got[i].Filename != tt.expected[i].Filename {

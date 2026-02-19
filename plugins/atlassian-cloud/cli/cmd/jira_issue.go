@@ -114,16 +114,16 @@ func runJiraIssueGet(_ *cobra.Command, args []string) error {
 	}
 
 	if issueAttachments || issueAllFields {
-		attachments := extractAttachments(response.Bytes.Bytes())
+		attachments := ExtractAttachments(response.Bytes.Bytes())
 		fmt.Print(output.FormatAttachments(attachments))
 	}
 
 	return nil
 }
 
-// extractAttachments parses attachment data from the raw Jira API response.
+// ExtractAttachments parses attachment data from the raw Jira API response.
 // IssueFieldsSchemeV2 lacks an Attachment field, so we extract it directly from JSON.
-func extractAttachments(data []byte) []*models.IssueAttachmentScheme {
+func ExtractAttachments(data []byte) []*models.IssueAttachmentScheme {
 	var raw struct {
 		Fields struct {
 			Attachment []*models.IssueAttachmentScheme `json:"attachment"`
