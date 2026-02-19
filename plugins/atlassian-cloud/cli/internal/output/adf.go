@@ -25,6 +25,28 @@ type adfMark struct {
 	Attrs map[string]any `json:"attrs,omitempty"`
 }
 
+// attrString extracts a string attribute from an ADF attrs map,
+// returning defaultVal if the key is missing or not a string.
+func attrString(attrs map[string]any, key, defaultVal string) string {
+	if v, ok := attrs[key]; ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return defaultVal
+}
+
+// attrInt extracts a numeric attribute (JSON float64) as an int,
+// returning defaultVal if the key is missing or not a number.
+func attrInt(attrs map[string]any, key string, defaultVal int) int {
+	if v, ok := attrs[key]; ok {
+		if f, ok := v.(float64); ok {
+			return int(f)
+		}
+	}
+	return defaultVal
+}
+
 func ADFToMarkdown(adfJSON string) (string, error) {
 	var doc adfDoc
 	if err := json.Unmarshal([]byte(adfJSON), &doc); err != nil {
@@ -46,24 +68,14 @@ func convertNode(sb *strings.Builder, node adfNode, prefix string) {
 		sb.WriteString("\n")
 
 	case "heading":
-		level := 1
-		if l, ok := node.Attrs["level"]; ok {
-			if f, ok := l.(float64); ok {
-				level = int(f)
-			}
-		}
+		level := attrInt(node.Attrs, "level", 1)
 		sb.WriteString(strings.Repeat("#", level))
 		sb.WriteString(" ")
 		convertInlineContent(sb, node.Content)
 		sb.WriteString("\n")
 
 	case "codeBlock":
-		lang := ""
-		if l, ok := node.Attrs["language"]; ok {
-			if s, ok := l.(string); ok {
-				lang = s
-			}
-		}
+		lang := attrString(node.Attrs, "language", "")
 		sb.WriteString("```")
 		sb.WriteString(lang)
 		sb.WriteString("\n")
@@ -101,26 +113,14 @@ func convertNode(sb *strings.Builder, node adfNode, prefix string) {
 	case "mediaSingle", "mediaGroup":
 		for _, child := range node.Content {
 			if child.Type == "media" {
-				alt := ""
-				if a, ok := child.Attrs["alt"]; ok {
-					if s, ok := a.(string); ok {
-						alt = s
-					}
-				}
-				url := ""
-				if u, ok := child.Attrs["url"]; ok {
-					if s, ok := u.(string); ok {
-						url = s
-					}
-				}
+				alt := attrString(child.Attrs, "alt", "")
+				url := attrString(child.Attrs, "url", "")
 				if url == "" {
-					if id, ok := child.Attrs["id"]; ok {
-						if s, ok := id.(string); ok {
-							url = fmt.Sprintf("attachment:%s", s)
-						}
+					if id := attrString(child.Attrs, "id", ""); id != "" {
+						url = "attachment:" + id
 					}
 				}
-				sb.WriteString(fmt.Sprintf("![%s](%s)\n", alt, url))
+				fmt.Fprintf(sb, "![%s](%s)\n", alt, url)
 			}
 		}
 
@@ -128,32 +128,21 @@ func convertNode(sb *strings.Builder, node adfNode, prefix string) {
 		sb.WriteString("---\n")
 
 	case "panel":
-		panelType := "info"
-		if pt, ok := node.Attrs["panelType"]; ok {
-			if s, ok := pt.(string); ok {
-				panelType = s
-			}
-		}
-		sb.WriteString(fmt.Sprintf("> **%s**\n", strings.ToUpper(panelType)))
+		panelType := attrString(node.Attrs, "panelType", "info")
+		fmt.Fprintf(sb, "> **%s**\n", strings.ToUpper(panelType))
 		for _, child := range node.Content {
 			convertNode(sb, child, "> ")
 		}
 
 	case "expand":
-		title := "Details"
-		if t, ok := node.Attrs["title"]; ok {
-			if s, ok := t.(string); ok {
-				title = s
-			}
-		}
-		sb.WriteString(fmt.Sprintf("<details><summary>%s</summary>\n\n", title))
+		title := attrString(node.Attrs, "title", "Details")
+		fmt.Fprintf(sb, "<details><summary>%s</summary>\n\n", title)
 		for _, child := range node.Content {
 			convertNode(sb, child, "")
 		}
 		sb.WriteString("</details>\n")
 
 	default:
-		// Fallback: render children
 		for _, child := range node.Content {
 			convertNode(sb, child, prefix)
 		}
@@ -164,49 +153,28 @@ func convertInlineContent(sb *strings.Builder, nodes []adfNode) {
 	for _, node := range nodes {
 		switch node.Type {
 		case "text":
-			text := node.Text
-			text = applyMarks(text, node.Marks)
-			sb.WriteString(text)
+			sb.WriteString(applyMarks(node.Text, node.Marks))
 
 		case "mention":
-			name := "@unknown"
-			if t, ok := node.Attrs["text"]; ok {
-				if s, ok := t.(string); ok {
-					name = s
-				}
-			}
-			sb.WriteString(name)
+			sb.WriteString(attrString(node.Attrs, "text", "@unknown"))
 
 		case "emoji":
-			if shortName, ok := node.Attrs["shortName"]; ok {
-				if s, ok := shortName.(string); ok {
-					sb.WriteString(s)
-				}
+			if s := attrString(node.Attrs, "shortName", ""); s != "" {
+				sb.WriteString(s)
 			}
 
 		case "inlineCard":
-			url := ""
-			if u, ok := node.Attrs["url"]; ok {
-				if s, ok := u.(string); ok {
-					url = s
-				}
-			}
-			sb.WriteString(fmt.Sprintf("[link](%s)", url))
+			url := attrString(node.Attrs, "url", "")
+			fmt.Fprintf(sb, "[link](%s)", url)
 
 		case "status":
-			text := ""
-			if t, ok := node.Attrs["text"]; ok {
-				if s, ok := t.(string); ok {
-					text = s
-				}
-			}
-			sb.WriteString(fmt.Sprintf("[%s]", text))
+			text := attrString(node.Attrs, "text", "")
+			fmt.Fprintf(sb, "[%s]", text)
 
 		case "hardBreak":
 			sb.WriteString("\n")
 
 		default:
-			// Recurse into unknown inline nodes
 			convertInlineContent(sb, node.Content)
 		}
 	}
@@ -226,10 +194,8 @@ func applyMarks(text string, marks []adfMark) string {
 		case "underline":
 			text = "<u>" + text + "</u>"
 		case "link":
-			if href, ok := mark.Attrs["href"]; ok {
-				if s, ok := href.(string); ok {
-					text = fmt.Sprintf("[%s](%s)", text, s)
-				}
+			if href := attrString(mark.Attrs, "href", ""); href != "" {
+				text = fmt.Sprintf("[%s](%s)", text, href)
 			}
 		}
 	}
@@ -268,3 +234,4 @@ func convertTable(sb *strings.Builder, node adfNode) {
 		}
 	}
 }
+
