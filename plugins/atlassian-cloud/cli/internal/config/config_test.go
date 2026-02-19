@@ -147,3 +147,104 @@ func TestDirWithoutXDG(t *testing.T) {
 		t.Errorf("Dir() = %q, want %q", dir, expected)
 	}
 }
+
+func TestSiteAuthValidate(t *testing.T) {
+	tests := []struct {
+		name    string
+		auth    SiteAuth
+		wantErr bool
+	}{
+		{
+			name:    "valid oauth2",
+			auth:    SiteAuth{Method: AuthMethodOAuth2, AccessToken: "tok", CloudID: "cid"},
+			wantErr: false,
+		},
+		{
+			name:    "valid token",
+			auth:    SiteAuth{Method: AuthMethodToken, Email: "a@b.com", APIToken: "tok"},
+			wantErr: false,
+		},
+		{
+			name:    "oauth2 missing access_token",
+			auth:    SiteAuth{Method: AuthMethodOAuth2, CloudID: "cid"},
+			wantErr: true,
+		},
+		{
+			name:    "oauth2 missing cloud_id",
+			auth:    SiteAuth{Method: AuthMethodOAuth2, AccessToken: "tok"},
+			wantErr: true,
+		},
+		{
+			name:    "token missing email",
+			auth:    SiteAuth{Method: AuthMethodToken, APIToken: "tok"},
+			wantErr: true,
+		},
+		{
+			name:    "token missing api_token",
+			auth:    SiteAuth{Method: AuthMethodToken, Email: "a@b.com"},
+			wantErr: true,
+		},
+		{
+			name:    "unknown method",
+			auth:    SiteAuth{Method: "magic"},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.auth.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestSiteAuthExpiryTime(t *testing.T) {
+	t.Run("valid RFC3339", func(t *testing.T) {
+		sa := SiteAuth{TokenExpiry: "2026-02-19T15:30:00Z"}
+		tm, err := sa.ExpiryTime()
+		if err != nil {
+			t.Fatalf("ExpiryTime() error: %v", err)
+		}
+		if tm.Year() != 2026 || tm.Month() != 2 || tm.Day() != 19 {
+			t.Errorf("ExpiryTime() = %v, unexpected date", tm)
+		}
+	})
+	t.Run("empty string", func(t *testing.T) {
+		sa := SiteAuth{}
+		_, err := sa.ExpiryTime()
+		if err == nil {
+			t.Error("ExpiryTime() expected error for empty TokenExpiry")
+		}
+	})
+	t.Run("malformed", func(t *testing.T) {
+		sa := SiteAuth{TokenExpiry: "not-a-date"}
+		_, err := sa.ExpiryTime()
+		if err == nil {
+			t.Error("ExpiryTime() expected error for malformed TokenExpiry")
+		}
+	})
+}
+
+func TestSaveAuthConfigSetsVersion(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	cfg := &AuthConfig{
+		DefaultSite: "test.atlassian.net",
+		Sites:       map[string]SiteAuth{},
+	}
+
+	if err := SaveAuthConfig(cfg); err != nil {
+		t.Fatalf("SaveAuthConfig error: %v", err)
+	}
+
+	loaded, err := LoadAuthConfig()
+	if err != nil {
+		t.Fatalf("LoadAuthConfig error: %v", err)
+	}
+	if loaded.Version != CurrentConfigVersion {
+		t.Errorf("Version = %d, want %d", loaded.Version, CurrentConfigVersion)
+	}
+}

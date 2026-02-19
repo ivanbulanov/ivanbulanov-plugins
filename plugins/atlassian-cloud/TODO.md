@@ -439,7 +439,7 @@ Replace all bare string literals across `auth.go`, `clients.go`, and `config_tes
 
 ---
 
-### 16. `SiteAuth` flat struct allows invalid field combinations
+### ~~16. `SiteAuth` flat struct allows invalid field combinations~~ DONE (Validate() method)
 
 **File:** `cli/internal/config/config.go:17-26`
 **Category:** Type design
@@ -487,7 +487,7 @@ is currently unused by any command but is exported.
 
 ---
 
-### 19. No config schema version for future migration
+### ~~19. No config schema version for future migration~~ DONE
 
 **File:** `cli/internal/config/config.go:12-15`
 **Category:** Forward compatibility

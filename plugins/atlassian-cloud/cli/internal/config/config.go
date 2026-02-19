@@ -16,6 +16,7 @@ const (
 )
 
 type AuthConfig struct {
+	Version     int                 `json:"version"`
 	DefaultSite string              `json:"default_site"`
 	Sites       map[string]SiteAuth `json:"sites"`
 }
@@ -29,6 +30,29 @@ type SiteAuth struct {
 	Scopes       []string `json:"scopes,omitempty"`
 	Email        string   `json:"email,omitempty"`
 	APIToken     string   `json:"api_token,omitempty"`
+}
+
+// Validate checks that the SiteAuth has consistent fields for its Method.
+func (s *SiteAuth) Validate() error {
+	switch s.Method {
+	case AuthMethodOAuth2:
+		if s.AccessToken == "" {
+			return fmt.Errorf("oauth2 auth missing access_token")
+		}
+		if s.CloudID == "" {
+			return fmt.Errorf("oauth2 auth missing cloud_id")
+		}
+	case AuthMethodToken:
+		if s.Email == "" {
+			return fmt.Errorf("token auth missing email")
+		}
+		if s.APIToken == "" {
+			return fmt.Errorf("token auth missing api_token")
+		}
+	default:
+		return fmt.Errorf("unknown auth method %q", s.Method)
+	}
+	return nil
 }
 
 // ExpiryTime parses TokenExpiry and returns the resulting time.
@@ -96,7 +120,12 @@ func LoadAuthConfig() (*AuthConfig, error) {
 	return &cfg, nil
 }
 
+// CurrentConfigVersion is the config schema version written by this release.
+const CurrentConfigVersion = 1
+
 func SaveAuthConfig(cfg *AuthConfig) error {
+	cfg.Version = CurrentConfigVersion
+
 	path, err := authConfigPath()
 	if err != nil {
 		return err
