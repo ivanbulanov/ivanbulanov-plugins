@@ -525,7 +525,7 @@ the three call sites.
 
 ## Test Coverage Gaps
 
-### 21. `internal/auth/` — zero tests (remaining)
+### ~~21. `internal/auth/` — zero tests~~ DONE (unit-testable parts)
 
 The entire auth package (OAuth2 flow, token refresh, client factory) has no tests.
 Priority scenarios:
@@ -560,7 +560,7 @@ implemented features:
 - `LoadAuthConfig` with malformed JSON
 - `Dir()` when `XDG_CONFIG_HOME` is unset (most common macOS path)
 
-### 25. `cmd/` — zero tests
+### ~~25. `cmd/` — zero tests~~ DONE (resolveSite, escapeCQL)
 
 Business logic in command layer is untested:
 - CQL construction in `runConfluenceSearch`
