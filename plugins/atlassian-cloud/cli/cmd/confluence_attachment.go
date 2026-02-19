@@ -83,14 +83,14 @@ func runConfluenceAttachmentDownload(_ *cobra.Command, args []string) error {
 
 	if confDownloadAll {
 		for _, a := range attachments.Results {
-			dlURL := clients.ConfluenceBaseURL + a.DownloadLink
+			dlURL := clients.ConfluenceBaseURL + "/wiki" + a.DownloadLink
 			targets = append(targets, dlTarget{filename: a.Title, url: dlURL})
 		}
 	} else {
 		found := false
 		for _, a := range attachments.Results {
 			if a.Title == filename {
-				dlURL := clients.ConfluenceBaseURL + a.DownloadLink
+				dlURL := clients.ConfluenceBaseURL + "/wiki" + a.DownloadLink
 				targets = append(targets, dlTarget{filename: a.Title, url: dlURL})
 				found = true
 				break
