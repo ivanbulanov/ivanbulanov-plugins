@@ -4,17 +4,20 @@ import "testing"
 
 func TestParseJiraURL(t *testing.T) {
 	tests := []struct {
-		input    string
-		wantKey  string
-		wantSite string
-		wantOk   bool
+		input         string
+		wantKey       string
+		wantSite      string
+		wantCommentID string
+		wantOk        bool
 	}{
-		{"DEV-123", "DEV-123", "", true},
-		{"PROJ-1", "PROJ-1", "", true},
-		{"https://acme-corp.atlassian.net/browse/ACME-5136", "ACME-5136", "acme-corp.atlassian.net", true},
-		{"https://company.atlassian.net/browse/PROJ-456?focusedCommentId=123", "PROJ-456", "company.atlassian.net", true},
-		{"not-a-ticket", "", "", false},
-		{"", "", "", false},
+		{"DEV-123", "DEV-123", "", "", true},
+		{"PROJ-1", "PROJ-1", "", "", true},
+		{"https://acme-corp.atlassian.net/browse/ACME-5136", "ACME-5136", "acme-corp.atlassian.net", "", true},
+		{"https://company.atlassian.net/browse/PROJ-456?focusedCommentId=123", "PROJ-456", "company.atlassian.net", "123", true},
+		{"https://company.atlassian.net/browse/PROJ-456?focusedId=999", "PROJ-456", "company.atlassian.net", "999", true},
+		{"https://company.atlassian.net/browse/PROJ-456?focusedCommentId=123&amp;other=val", "PROJ-456", "company.atlassian.net", "123", true},
+		{"not-a-ticket", "", "", "", false},
+		{"", "", "", "", false},
 	}
 
 	for _, tt := range tests {
@@ -31,6 +34,9 @@ func TestParseJiraURL(t *testing.T) {
 			}
 			if result.Site != tt.wantSite {
 				t.Errorf("Site = %q, want %q", result.Site, tt.wantSite)
+			}
+			if result.CommentID != tt.wantCommentID {
+				t.Errorf("CommentID = %q, want %q", result.CommentID, tt.wantCommentID)
 			}
 		})
 	}

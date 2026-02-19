@@ -14,8 +14,9 @@ var (
 )
 
 type JiraRef struct {
-	IssueKey string
-	Site     string
+	IssueKey  string
+	Site      string
+	CommentID string
 }
 
 type ConfluenceRef struct {
@@ -46,9 +47,15 @@ func ParseJiraRef(input string) (JiraRef, bool) {
 		return JiraRef{}, false
 	}
 
+	commentID := u.Query().Get("focusedCommentId")
+	if commentID == "" {
+		commentID = u.Query().Get("focusedId")
+	}
+
 	return JiraRef{
-		IssueKey: matches[1],
-		Site:     u.Host,
+		IssueKey:  matches[1],
+		Site:      u.Host,
+		CommentID: commentID,
 	}, true
 }
 
