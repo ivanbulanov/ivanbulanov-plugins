@@ -223,6 +223,7 @@ func TestJira_FormatComments(t *testing.T) {
 	t.Run("nil Author", func(t *testing.T) {
 		comments := []*models.IssueCommentSchemeV2{
 			{
+				ID:      "10001",
 				Author:  nil,
 				Created: "2024-06-15T10:30:00.000+0000",
 				Body:    "Some comment",
@@ -232,16 +233,21 @@ func TestJira_FormatComments(t *testing.T) {
 		if !strings.Contains(got, "**Unknown**") {
 			t.Errorf("expected Unknown author, got:\n%s", got)
 		}
+		if !strings.Contains(got, "[ID: 10001]") {
+			t.Errorf("expected comment ID in output, got:\n%s", got)
+		}
 	})
 
 	t.Run("multiple comments", func(t *testing.T) {
 		comments := []*models.IssueCommentSchemeV2{
 			{
+				ID:      "10001",
 				Author:  &models.UserScheme{DisplayName: "Alice"},
 				Created: "2024-06-15T10:30:00.000+0000",
 				Body:    "First comment",
 			},
 			{
+				ID:      "10002",
 				Author:  &models.UserScheme{DisplayName: "Bob"},
 				Created: "2024-06-16T11:00:00.000+0000",
 				Body:    "Second comment",
@@ -255,8 +261,14 @@ func TestJira_FormatComments(t *testing.T) {
 		if !strings.Contains(got, "1. **Alice**") {
 			t.Errorf("expected comment 1 by Alice, got:\n%s", got)
 		}
+		if !strings.Contains(got, "[ID: 10001]") {
+			t.Errorf("expected comment ID 10001, got:\n%s", got)
+		}
 		if !strings.Contains(got, "2. **Bob**") {
 			t.Errorf("expected comment 2 by Bob, got:\n%s", got)
+		}
+		if !strings.Contains(got, "[ID: 10002]") {
+			t.Errorf("expected comment ID 10002, got:\n%s", got)
 		}
 		if !strings.Contains(got, "First comment") {
 			t.Errorf("expected first comment body, got:\n%s", got)
