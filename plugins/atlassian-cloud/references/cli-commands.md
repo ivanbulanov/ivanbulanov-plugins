@@ -23,6 +23,7 @@
 | `jira comment list <key\|url>` | List comments |
 | `jira comment add <key\|url>` | Add comment |
 | `jira fields list` | List available fields |
+| `jira attachment download <key\|url> [filename]` | Download attachments |
 
 ### Issue Get Flags
 
@@ -48,12 +49,20 @@
 | `--body` | Comment text |
 | `--stdin` | Read from stdin |
 
+### Attachment Download Flags
+
+| Flag | Description |
+|------|-------------|
+| `--all` | Download all attachments |
+| `--output-dir` | Directory to save files (default: OS temp dir) |
+
 ## Confluence Commands
 
 | Command | Description |
 |---------|-------------|
 | `confluence page get <id\|url>` | Get page details |
 | `confluence search <query>` | Search with CQL |
+| `confluence attachment download <id\|url> [filename]` | Download attachments |
 
 ### Page Get Flags
 
@@ -68,6 +77,13 @@
 |------|---------|-------------|
 | `--space` | (all) | Limit to space key |
 | `--max` | 10 | Max results |
+
+### Confluence Attachment Download Flags
+
+| Flag | Description |
+|------|-------------|
+| `--all` | Download all attachments |
+| `--output-dir` | Directory to save files (default: OS temp dir) |
 
 ## Exit Codes
 
