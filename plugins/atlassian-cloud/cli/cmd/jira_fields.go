@@ -31,9 +31,13 @@ func runJiraFieldsList(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	fields, _, err := clients.Jira.Issue.Field.Gets(context.Background())
+	fields, response, err := clients.Jira.Issue.Field.Gets(context.Background())
 	if err != nil {
-		return fmt.Errorf("cannot list fields: %w", err)
+		code := 0
+		if response != nil {
+			code = response.Code
+		}
+		return auth.WrapAPIError(code, fmt.Errorf("cannot list fields: %w", err))
 	}
 
 	fmt.Printf("| %-30s | %-25s | %-10s |\n", "ID", "Name", "Custom")

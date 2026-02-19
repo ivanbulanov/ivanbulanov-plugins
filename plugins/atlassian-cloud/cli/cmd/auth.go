@@ -151,9 +151,8 @@ func runAuthStatus(_ *cobra.Command, _ []string) error {
 	fmt.Printf("Default site: %s\n\n", cfg.DefaultSite)
 	for name, site := range cfg.Sites {
 		status := "valid"
-		if site.Method == config.AuthMethodOAuth2 && site.TokenExpiry != "" {
-			expiry, parseErr := time.Parse(time.RFC3339, site.TokenExpiry)
-			if parseErr == nil && time.Now().After(expiry) {
+		if site.Method == config.AuthMethodOAuth2 {
+			if expiry, parseErr := site.ExpiryTime(); parseErr == nil && time.Now().After(expiry) {
 				status = "expired (will refresh on next use)"
 			}
 		}

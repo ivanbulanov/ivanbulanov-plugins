@@ -79,9 +79,13 @@ func runConfluencePageGet(_ *cobra.Command, args []string) error {
 		bodyFormat = "atlas_doc_format"
 	}
 
-	page, _, err := clients.ConfluenceV2.Page.Get(context.Background(), pageID, bodyFormat, false, 0)
+	page, response, err := clients.ConfluenceV2.Page.Get(context.Background(), pageID, bodyFormat, false, 0)
 	if err != nil {
-		return fmt.Errorf("cannot get page: %w", err)
+		code := 0
+		if response != nil {
+			code = response.Code
+		}
+		return auth.WrapAPIError(code, fmt.Errorf("cannot get page: %w", err))
 	}
 
 	fmt.Print(output.FormatPageSummary(page))
@@ -114,11 +118,15 @@ func runConfluenceSearch(_ *cobra.Command, args []string) error {
 	}
 	cql += fmt.Sprintf(` AND text ~ "%s"`, escapeCQL(args[0]))
 
-	results, _, err := clients.ConfluenceV1.Search.Content(context.Background(), cql, &models.SearchContentOptions{
+	results, response, err := clients.ConfluenceV1.Search.Content(context.Background(), cql, &models.SearchContentOptions{
 		Limit: searchMaxConf,
 	})
 	if err != nil {
-		return fmt.Errorf("search failed: %w", err)
+		code := 0
+		if response != nil {
+			code = response.Code
+		}
+		return auth.WrapAPIError(code, fmt.Errorf("search failed: %w", err))
 	}
 
 	fmt.Print(output.FormatSearchResultsConfluence(results.Results, results.TotalSize))

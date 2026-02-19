@@ -94,10 +94,11 @@ func runJiraIssueGet(_ *cobra.Command, args []string) error {
 		if response != nil && response.Code == 404 {
 			return fmt.Errorf("issue %s not found", ref.IssueKey)
 		}
-		if response != nil && response.Code == 401 {
-			return &auth.AuthRequiredError{Message: "authentication failed; run: atlassian-cloud auth login"}
+		code := 0
+		if response != nil {
+			code = response.Code
 		}
-		return fmt.Errorf("cannot get issue: %w", err)
+		return auth.WrapAPIError(code, fmt.Errorf("cannot get issue: %w", err))
 	}
 
 	fmt.Print(output.FormatIssueSummary(issue))
@@ -128,9 +129,13 @@ func runJiraSearch(_ *cobra.Command, args []string) error {
 		fields = append(fields, "description")
 	}
 
-	results, _, err := clients.Jira.Issue.Search.SearchJQL(context.Background(), args[0], fields, nil, searchMax, "")
+	results, response, err := clients.Jira.Issue.Search.SearchJQL(context.Background(), args[0], fields, nil, searchMax, "")
 	if err != nil {
-		return fmt.Errorf("search failed: %w", err)
+		code := 0
+		if response != nil {
+			code = response.Code
+		}
+		return auth.WrapAPIError(code, fmt.Errorf("search failed: %w", err))
 	}
 
 	fmt.Print(output.FormatSearchResults(results.Issues, results.Total))

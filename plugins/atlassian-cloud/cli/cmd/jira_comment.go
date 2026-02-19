@@ -58,9 +58,13 @@ func runJiraCommentList(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	comments, _, err := clients.Jira.Issue.Comment.Gets(context.Background(), ref.IssueKey, "", nil, 0, 50)
+	comments, response, err := clients.Jira.Issue.Comment.Gets(context.Background(), ref.IssueKey, "", nil, 0, 50)
 	if err != nil {
-		return fmt.Errorf("cannot list comments: %w", err)
+		code := 0
+		if response != nil {
+			code = response.Code
+		}
+		return auth.WrapAPIError(code, fmt.Errorf("cannot list comments: %w", err))
 	}
 
 	fmt.Print(output.FormatComments(comments.Comments))
@@ -92,9 +96,13 @@ func runJiraCommentAdd(_ *cobra.Command, args []string) error {
 	}
 
 	payload := &models.CommentPayloadSchemeV2{Body: body}
-	comment, _, err := clients.Jira.Issue.Comment.Add(context.Background(), ref.IssueKey, payload, nil)
+	comment, response, err := clients.Jira.Issue.Comment.Add(context.Background(), ref.IssueKey, payload, nil)
 	if err != nil {
-		return fmt.Errorf("cannot add comment: %w", err)
+		code := 0
+		if response != nil {
+			code = response.Code
+		}
+		return auth.WrapAPIError(code, fmt.Errorf("cannot add comment: %w", err))
 	}
 
 	fmt.Printf("Comment added (ID: %s)\n", comment.ID)

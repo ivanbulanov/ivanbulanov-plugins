@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 const appName = "atlassian-cloud"
@@ -28,6 +29,15 @@ type SiteAuth struct {
 	Scopes       []string `json:"scopes,omitempty"`
 	Email        string   `json:"email,omitempty"`
 	APIToken     string   `json:"api_token,omitempty"`
+}
+
+// ExpiryTime parses TokenExpiry and returns the resulting time.
+// Returns the zero time and an error if parsing fails or TokenExpiry is empty.
+func (s *SiteAuth) ExpiryTime() (time.Time, error) {
+	if s.TokenExpiry == "" {
+		return time.Time{}, fmt.Errorf("token expiry not set")
+	}
+	return time.Parse(time.RFC3339, s.TokenExpiry)
 }
 
 func Dir() (string, error) {

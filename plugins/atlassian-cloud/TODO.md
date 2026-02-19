@@ -237,7 +237,7 @@ if response != nil && response.Code == 401 {
 
 ---
 
-### 9. Inconsistent HTTP 401 handling across commands
+### ~~9. Inconsistent HTTP 401 handling across commands~~ DONE
 
 **File:** Only `cli/cmd/jira_issue.go:92-96` checks for 401.
 **Category:** Contract inconsistency
@@ -456,7 +456,7 @@ tagged union pattern.
 
 ---
 
-### 17. `TokenExpiry` stored as raw string instead of `time.Time`
+### ~~17. `TokenExpiry` stored as raw string instead of `time.Time`~~ DONE (ExpiryTime() helper)
 
 **File:** `cli/internal/config/config.go:21`
 **Category:** Type design — primitive obsession
@@ -473,7 +473,7 @@ helper method `(s *SiteAuth) ExpiryTime() (time.Time, error)` to centralize the 
 
 ---
 
-### 18. `Clients.SiteURL` is misleadingly named
+### ~~18. `Clients.SiteURL` is misleadingly named~~ DONE (renamed to JiraBaseURL)
 
 **File:** `cli/internal/auth/clients.go:30,110`
 **Category:** Naming
@@ -525,7 +525,7 @@ the three call sites.
 
 ## Test Coverage Gaps
 
-### 21. `internal/auth/` — zero tests
+### 21. `internal/auth/` — zero tests (remaining)
 
 The entire auth package (OAuth2 flow, token refresh, client factory) has no tests.
 Priority scenarios:
@@ -533,7 +533,7 @@ Priority scenarios:
 - `refreshTokenIfNeeded()` with expired, fresh, and malformed expiry strings
 - `NewClients()` with unknown auth method, missing site, valid config
 
-### 22. `internal/output/jira.go` and `confluence.go` — zero tests
+### ~~22. `internal/output/jira.go` and `confluence.go` — zero tests~~ DONE
 
 All formatting functions that produce user-visible output are completely untested:
 - `FormatIssueSummary` with nil `Fields`, nil nested fields
@@ -543,7 +543,7 @@ All formatting functions that produce user-visible output are completely unteste
 - `formatSize` boundary values (exactly 1024, 1048576)
 - `truncate` with UTF-8, short strings, edge cases
 
-### 23. `internal/output/adf.go` — missing node type tests
+### ~~23. `internal/output/adf.go` — missing node type tests~~ DONE
 
 Existing `TestADFToMarkdown` covers 10 cases but only single-node documents. Untested
 implemented features:
@@ -554,7 +554,7 @@ implemented features:
 - Invalid JSON input (error path)
 - `renderADF()` fallback behavior
 
-### 24. `internal/config/` — missing error path tests
+### ~~24. `internal/config/` — missing error path tests~~ DONE
 
 - `LoadAuthConfig` when no auth file exists (first-run experience)
 - `LoadAuthConfig` with malformed JSON

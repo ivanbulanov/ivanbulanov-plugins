@@ -29,12 +29,25 @@ type AuthRequiredError struct {
 
 func (e *AuthRequiredError) Error() string { return e.Message }
 
+// WrapAPIError checks an HTTP status code from an API response and returns
+// a typed error for 401 (authentication expired). For all other codes it
+// returns the original error unchanged. Pass 0 when the response is nil.
+func WrapAPIError(httpCode int, err error) error {
+	if err == nil {
+		return nil
+	}
+	if httpCode == 401 {
+		return &AuthRequiredError{Message: "authentication failed; run: atlassian-cloud auth login"}
+	}
+	return err
+}
+
 // Clients bundles authenticated Jira and Confluence API clients for a single site.
 type Clients struct {
 	Jira         *jira.Client
 	ConfluenceV1 *confluence.Client
 	ConfluenceV2 *confluencev2.Client
-	SiteURL      string
+	JiraBaseURL      string
 }
 
 // NewClients loads the auth config, resolves the given site (or the default),
@@ -112,7 +125,7 @@ func buildClients(jiraURL, confluenceURL string, configureAuth func(common.Authe
 		Jira:         jiraClient,
 		ConfluenceV1: confV1,
 		ConfluenceV2: confV2,
-		SiteURL:      jiraURL,
+		JiraBaseURL:      jiraURL,
 	}, nil
 }
 
@@ -121,7 +134,7 @@ func refreshTokenIfNeeded(cfg *config.AuthConfig, site string, siteAuth *config.
 		return siteAuth.AccessToken, nil
 	}
 
-	expiry, err := time.Parse(time.RFC3339, siteAuth.TokenExpiry)
+	expiry, err := siteAuth.ExpiryTime()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: cannot parse token expiry %q, attempting refresh\n", siteAuth.TokenExpiry)
 	} else if !time.Now().Add(tokenExpiryBuffer).After(expiry) {

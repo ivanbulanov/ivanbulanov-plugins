@@ -80,3 +80,70 @@ func TestAuthConfigRoundTrip(t *testing.T) {
 		t.Errorf("auth.json permissions = %o, want 0600", info.Mode().Perm())
 	}
 }
+
+func TestLoadAuthConfigNoFile(t *testing.T) {
+	// Simulate first-run: no auth.json exists yet.
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	cfg, err := LoadAuthConfig()
+	if err != nil {
+		t.Fatalf("LoadAuthConfig() unexpected error: %v", err)
+	}
+	if cfg == nil {
+		t.Fatal("LoadAuthConfig() returned nil config")
+	}
+	if cfg.Sites == nil {
+		t.Fatal("LoadAuthConfig() returned nil Sites map, want initialized map")
+	}
+	if len(cfg.Sites) != 0 {
+		t.Errorf("LoadAuthConfig() Sites has %d entries, want 0", len(cfg.Sites))
+	}
+	if cfg.DefaultSite != "" {
+		t.Errorf("LoadAuthConfig() DefaultSite = %q, want empty string", cfg.DefaultSite)
+	}
+}
+
+func TestLoadAuthConfigMalformedJSON(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	// Create the config directory so we can write auth.json directly.
+	configDir := filepath.Join(tmpDir, "atlassian-cloud")
+	if err := os.MkdirAll(configDir, 0700); err != nil {
+		t.Fatalf("MkdirAll error: %v", err)
+	}
+
+	authPath := filepath.Join(configDir, "auth.json")
+	if err := os.WriteFile(authPath, []byte(`{not json`), 0600); err != nil {
+		t.Fatalf("WriteFile error: %v", err)
+	}
+
+	cfg, err := LoadAuthConfig()
+	if err == nil {
+		t.Fatal("LoadAuthConfig() expected error for malformed JSON, got nil")
+	}
+	if cfg != nil {
+		t.Errorf("LoadAuthConfig() expected nil config on error, got %+v", cfg)
+	}
+}
+
+func TestDirWithoutXDG(t *testing.T) {
+	// Ensure XDG_CONFIG_HOME is unset so Dir() falls back to ~/.config.
+	t.Setenv("XDG_CONFIG_HOME", "")
+
+	dir, err := Dir()
+	if err != nil {
+		t.Fatalf("Dir() error: %v", err)
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatalf("UserHomeDir() error: %v", err)
+	}
+
+	expected := filepath.Join(home, ".config", "atlassian-cloud")
+	if dir != expected {
+		t.Errorf("Dir() = %q, want %q", dir, expected)
+	}
+}
