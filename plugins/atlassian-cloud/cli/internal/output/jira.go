@@ -72,7 +72,7 @@ func FormatComments(comments []*models.IssueCommentSchemeV2) string {
 		if c.Author != nil {
 			author = c.Author.DisplayName
 		}
-		fmt.Fprintf(&sb, "%d. **%s** (%s):\n", i+1, author, c.Created)
+		fmt.Fprintf(&sb, "%d. **%s** (%s) [ID: %s]:\n", i+1, author, c.Created, c.ID)
 
 		body := c.Body
 		if md, err := ADFToMarkdown(body); err == nil && md != "" {
