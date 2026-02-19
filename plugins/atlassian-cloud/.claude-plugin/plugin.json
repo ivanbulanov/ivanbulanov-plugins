@@ -1,0 +1,12 @@
+{
+  "name": "atlassian-cloud",
+  "version": "0.1.0",
+  "description": "Context-efficient Jira and Confluence Cloud access via Go CLI with OAuth2 authentication, progressive disclosure, and ADF-to-markdown conversion",
+  "author": {
+    "name": "Ivan Bulanov",
+    "url": "https://github.com/ivanbulanov"
+  },
+  "repository": "https://github.com/ivanbulanov/ivanbulanov-plugins",
+  "license": "MIT",
+  "keywords": ["jira", "confluence", "atlassian", "oauth2", "cloud"]
+}

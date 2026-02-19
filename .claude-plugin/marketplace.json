@@ -28,6 +28,19 @@
       "source": "./plugins/redis-reader",
       "category": "productivity",
       "homepage": "https://github.com/ivanbulanov/ivanbulanov-plugins/tree/master/plugins/redis-reader"
+    },
+    {
+      "name": "atlassian-cloud",
+      "description": "Context-efficient Jira and Confluence Cloud access via Go CLI with OAuth2, progressive disclosure, and ADF-to-markdown conversion",
+      "version": "0.1.0",
+      "author": {
+        "name": "Ivan Bulanov",
+        "url": "https://github.com/ivanbulanov"
+      },
+      "source": "./plugins/atlassian-cloud",
+      "category": "productivity",
+      "homepage": "https://github.com/ivanbulanov/ivanbulanov-plugins",
+      "keywords": ["jira", "confluence", "atlassian", "oauth2", "cloud"]
     }
   ]
 }
