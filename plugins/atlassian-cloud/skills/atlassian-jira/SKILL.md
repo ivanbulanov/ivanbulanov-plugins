@@ -178,6 +178,28 @@ $ATLASSIAN_CLI jira fields list
 $ATLASSIAN_CLI jira issue get KEY-123 --fields "Story Points,Sprint,customfield_10001"
 ```
 
+## Downloading Attachments
+
+### Single attachment
+```bash
+$ATLASSIAN_CLI jira attachment download KEY-123 report.pdf
+```
+
+Downloads to a temp directory and prints the file path.
+
+### All attachments
+```bash
+$ATLASSIAN_CLI jira attachment download KEY-123 --all
+```
+
+### Save to specific directory
+```bash
+$ATLASSIAN_CLI jira attachment download KEY-123 report.pdf --output-dir ./downloads
+$ATLASSIAN_CLI jira attachment download KEY-123 --all --output-dir ./downloads
+```
+
+Output: one file path per line. The agent can use the Read tool to view downloaded files.
+
 ## Presenting Results
 
 ### For simple lookups

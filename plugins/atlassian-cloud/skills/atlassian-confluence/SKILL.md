@@ -83,6 +83,28 @@ $ATLASSIAN_CLI confluence search "API documentation" --space WS --max 10
 
 Returns: Title, excerpt, URL for each result.
 
+## Downloading Attachments
+
+### Single attachment
+```bash
+$ATLASSIAN_CLI confluence attachment download <page-id-or-url> diagram.png
+```
+
+Downloads to a temp directory and prints the file path.
+
+### All attachments
+```bash
+$ATLASSIAN_CLI confluence attachment download <page-id-or-url> --all
+```
+
+### Save to specific directory
+```bash
+$ATLASSIAN_CLI confluence attachment download <page-id-or-url> diagram.png --output-dir ./downloads
+$ATLASSIAN_CLI confluence attachment download <page-id-or-url> --all --output-dir ./downloads
+```
+
+Output: one file path per line. The agent can use the Read tool to view downloaded files.
+
 ## Presenting Results
 
 ### For page summaries
