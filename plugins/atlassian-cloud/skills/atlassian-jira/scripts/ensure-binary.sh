@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CLI_DIR="${CLAUDE_PLUGIN_ROOT}/cli"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CLI_DIR="$(cd "$SCRIPT_DIR/../../../cli" && pwd)"
 BIN_PATH="${CLI_DIR}/bin/atlassian-cloud"
 
 # Check if binary exists and is executable

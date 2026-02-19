@@ -1,7 +1,7 @@
 ---
 name: atlassian-confluence
 description: Use when the user asks to "read confluence page", "get wiki page", "search confluence", "find in confluence", "look up documentation", or pastes a Confluence URL like "https://company.atlassian.net/wiki/spaces/SPACE/pages/123456/Page+Title". Also triggers when the user mentions Confluence page IDs or asks about company documentation on Confluence.
-version: 0.1.0
+version: 0.1.1
 ---
 
 # Confluence Page Operations via atlassian-cloud CLI
@@ -10,20 +10,27 @@ Read Confluence Cloud pages and search content with progressive disclosure for c
 
 ## Prerequisites
 
-Ensure the CLI binary is built:
+Use the **base directory** from the skill metadata header above to derive paths.
+
+Ensure the CLI binary is built (the script auto-detects paths):
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/../atlassian-jira/scripts/ensure-binary.sh
+<base-directory>/../atlassian-jira/scripts/ensure-binary.sh
 ```
 
-Set the CLI path:
+Set the CLI path (3 levels up from skill base to plugin root, then into cli/bin):
 ```bash
-ATLASSIAN_CLI="$(dirname "$(dirname "$CLAUDE_PLUGIN_ROOT")")/cli/bin/atlassian-cloud"
+ATLASSIAN_CLI="<base-directory>/../../../cli/bin/atlassian-cloud"
 ```
 
 ## Authentication
 
-Same as Jira — check with `$ATLASSIAN_CLI auth status`. See the atlassian-jira skill for setup instructions.
+Check auth first:
+```bash
+$ATLASSIAN_CLI auth status
+```
+
+If not authenticated, follow the **Guided API Token Setup** in the atlassian-jira skill — the same auth config covers both Jira and Confluence.
 
 ## Extracting Page References
 

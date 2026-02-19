@@ -1,7 +1,7 @@
 ---
 name: atlassian-jira
 description: Use when the user asks to "fetch JIRA issue", "get ticket", "show DEV-123", "look up issue", "search jira", "find tickets", "comment on ticket", "add comment to issue", or pastes a JIRA URL like "https://company.atlassian.net/browse/KEY-123". Also triggers on bare issue keys like "DEV-123" or "PROJ-456" in the user's message.
-version: 0.1.0
+version: 0.1.1
 ---
 
 # Jira Issue Operations via atlassian-cloud CLI
@@ -10,17 +10,19 @@ Access Jira Cloud issues, comments, and search with progressive disclosure for c
 
 ## Prerequisites
 
-Ensure the CLI binary is built:
+Use the **base directory** from the skill metadata header above to derive paths.
+
+Ensure the CLI binary is built (the script auto-detects paths):
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/skills/atlassian-jira/scripts/ensure-binary.sh
+<base-directory>/scripts/ensure-binary.sh
 ```
 
 If this fails, guide the user to install Go (`mise install go@latest` or https://go.dev/dl/).
 
-Set the CLI path:
+Set the CLI path (3 levels up from skill base to plugin root, then into cli/bin):
 ```bash
-ATLASSIAN_CLI="${CLAUDE_PLUGIN_ROOT}/cli/bin/atlassian-cloud"
+ATLASSIAN_CLI="<base-directory>/../../../cli/bin/atlassian-cloud"
 ```
 
 ## Authentication
@@ -30,21 +32,49 @@ Check auth status first:
 $ATLASSIAN_CLI auth status
 ```
 
-If not authenticated, guide the user:
+If already authenticated, proceed to the operation. Otherwise, walk the user through setup.
 
-**Option A: OAuth2 (recommended)**
-Requires `ATLASSIAN_CLIENT_ID` and `ATLASSIAN_CLIENT_SECRET` environment variables.
+### Guided API Token Setup (recommended)
+
+API tokens are the simplest way to authenticate. Walk the user through these steps interactively:
+
+**Step 1: Extract the site from context.**
+If the user pasted a URL like `https://acme-corp.atlassian.net/browse/DEV-123`, the site is `acme-corp.atlassian.net`.
+If only a bare issue key was given, ask: "What is your Atlassian site URL? (e.g. `yourcompany.atlassian.net`)"
+
+**Step 2: Ask for their Atlassian account email.**
+"What email do you use to log into `<site>`?"
+
+**Step 3: Direct them to create an API token.**
+Tell the user:
+> Go to https://id.atlassian.com/manage-profile/security/api-tokens and click **Create API token**.
+> Give it a name (e.g. "CLI") and copy the token value.
+
+Then ask: "Paste your API token here (it will be stored locally in `~/.config/atlassian-cloud/auth.json` with 0600 permissions)."
+
+**Step 4: Run the auth command with the collected values.**
+```bash
+$ATLASSIAN_CLI auth token --email <email> --token <token> --site <site>
+```
+
+**Step 5: Verify.**
+```bash
+$ATLASSIAN_CLI auth status
+```
+
+If successful, proceed with the original request. If it fails, check for typos in email/token/site.
+
+### OAuth2 (alternative — for apps or shared environments)
+
+Only suggest this if the user specifically wants browser-based login or is building an integration.
+Requires `ATLASSIAN_CLIENT_ID` and `ATLASSIAN_CLIENT_SECRET` environment variables from an OAuth 2.0 app at https://developer.atlassian.com/console/myapps/.
 ```bash
 $ATLASSIAN_CLI auth login
 ```
 
-**Option B: API Token**
-```bash
-$ATLASSIAN_CLI auth token --email user@company.com --token YOUR_TOKEN --site company.atlassian.net
-```
-Get a token at: https://id.atlassian.com/manage-profile/security/api-tokens
+### Re-authentication
 
-If any command exits with code 2, authentication has expired. Tell the user to run `auth login` again.
+If any command exits with code 2, the token is invalid or expired. Run `$ATLASSIAN_CLI auth status` to diagnose, then repeat the setup if needed. API tokens don't expire unless revoked, so exit code 2 usually means the token was deleted or the email/site is wrong.
 
 ## Extracting Issue Keys
 
