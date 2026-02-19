@@ -44,10 +44,12 @@ func WrapAPIError(httpCode int, err error) error {
 
 // Clients bundles authenticated Jira and Confluence API clients for a single site.
 type Clients struct {
-	Jira         *jira.Client
-	ConfluenceV1 *confluence.Client
-	ConfluenceV2 *confluencev2.Client
-	JiraBaseURL      string
+	Jira              *jira.Client
+	ConfluenceV1      *confluence.Client
+	ConfluenceV2      *confluencev2.Client
+	JiraBaseURL       string
+	ConfluenceBaseURL string
+	HTTPClient        *http.Client
 }
 
 // NewClients loads the auth config, resolves the given site (or the default),
@@ -90,19 +92,28 @@ func newOAuth2Clients(cfg *config.AuthConfig, site string, siteAuth *config.Site
 	jiraURL := fmt.Sprintf("https://api.atlassian.com/ex/jira/%s", cloudID)
 	confluenceURL := fmt.Sprintf("https://api.atlassian.com/ex/confluence/%s", cloudID)
 
+	httpClient := &http.Client{
+		Transport: &bearerTransport{token: accessToken},
+	}
+
 	return buildClients(jiraURL, confluenceURL, func(a common.Authentication) {
 		a.SetBearerToken(accessToken)
-	})
+	}, httpClient)
 }
 
 func newTokenClients(site string, siteAuth *config.SiteAuth) (*Clients, error) {
 	siteURL := fmt.Sprintf("https://%s", site)
+
+	httpClient := &http.Client{
+		Transport: &basicAuthTransport{email: siteAuth.Email, token: siteAuth.APIToken},
+	}
+
 	return buildClients(siteURL, siteURL, func(a common.Authentication) {
 		a.SetBasicAuth(siteAuth.Email, siteAuth.APIToken)
-	})
+	}, httpClient)
 }
 
-func buildClients(jiraURL, confluenceURL string, configureAuth func(common.Authentication)) (*Clients, error) {
+func buildClients(jiraURL, confluenceURL string, configureAuth func(common.Authentication), httpClient *http.Client) (*Clients, error) {
 	jiraClient, err := jira.New(http.DefaultClient, jiraURL)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create Jira client: %w", err)
@@ -122,11 +133,34 @@ func buildClients(jiraURL, confluenceURL string, configureAuth func(common.Authe
 	configureAuth(confV2.Auth)
 
 	return &Clients{
-		Jira:         jiraClient,
-		ConfluenceV1: confV1,
-		ConfluenceV2: confV2,
-		JiraBaseURL:      jiraURL,
+		Jira:              jiraClient,
+		ConfluenceV1:      confV1,
+		ConfluenceV2:      confV2,
+		JiraBaseURL:       jiraURL,
+		ConfluenceBaseURL: confluenceURL,
+		HTTPClient:        httpClient,
 	}, nil
+}
+
+type bearerTransport struct {
+	token string
+}
+
+func (t *bearerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req = req.Clone(req.Context())
+	req.Header.Set("Authorization", "Bearer "+t.token)
+	return http.DefaultTransport.RoundTrip(req)
+}
+
+type basicAuthTransport struct {
+	email string
+	token string
+}
+
+func (t *basicAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req = req.Clone(req.Context())
+	req.SetBasicAuth(t.email, t.token)
+	return http.DefaultTransport.RoundTrip(req)
 }
 
 func refreshTokenIfNeeded(cfg *config.AuthConfig, site string, siteAuth *config.SiteAuth) (string, error) {
