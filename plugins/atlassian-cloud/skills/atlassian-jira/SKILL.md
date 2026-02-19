@@ -1,6 +1,6 @@
 ---
 name: atlassian-jira
-description: Use when the user asks to "fetch JIRA issue", "get ticket", "show DEV-123", "look up issue", "search jira", "find tickets", "comment on ticket", "add comment to issue", or pastes a JIRA URL like "https://company.atlassian.net/browse/KEY-123". Also triggers on bare issue keys like "DEV-123" or "PROJ-456" in the user's message.
+description: Use when the user asks to "fetch JIRA issue", "get ticket", "show DEV-123", "look up issue", "search jira", "find tickets", "comment on ticket", "add comment to issue", "update comment", "edit comment", or pastes a JIRA URL like "https://company.atlassian.net/browse/KEY-123". Also triggers on bare issue keys like "DEV-123" or "PROJ-456" in the user's message.
 version: 0.1.1
 ---
 
@@ -164,6 +164,21 @@ $ATLASSIAN_CLI jira comment add KEY-123 --body "Fix deployed in v2.3.1"
 For longer comments:
 ```bash
 echo "Detailed analysis of the issue..." | $ATLASSIAN_CLI jira comment add KEY-123 --stdin
+```
+
+### Update a comment
+```bash
+$ATLASSIAN_CLI jira comment update KEY-123 10042 --body "Updated analysis"
+```
+
+Using a comment URL:
+```bash
+$ATLASSIAN_CLI jira comment update "https://company.atlassian.net/browse/KEY-123?focusedCommentId=10042" --body "Updated text"
+```
+
+For longer updates:
+```bash
+echo "Revised detailed analysis..." | $ATLASSIAN_CLI jira comment update KEY-123 10042 --stdin
 ```
 
 ## Custom Fields

@@ -22,6 +22,7 @@
 | `jira search <jql>` | Search with JQL |
 | `jira comment list <key\|url>` | List comments |
 | `jira comment add <key\|url>` | Add comment |
+| `jira comment update <key\|url> [comment-id]` | Update comment |
 | `jira fields list` | List available fields |
 | `jira attachment download <key\|url> [filename]` | Download attachments |
 
@@ -47,6 +48,13 @@
 | Flag | Description |
 |------|-------------|
 | `--body` | Comment text |
+| `--stdin` | Read from stdin |
+
+### Comment Update Flags
+
+| Flag | Description |
+|------|-------------|
+| `--body` | New comment text |
 | `--stdin` | Read from stdin |
 
 ### Attachment Download Flags
