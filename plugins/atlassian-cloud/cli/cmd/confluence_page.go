@@ -63,17 +63,10 @@ func runConfluencePageGet(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid page reference: %s", args[0])
 	}
 
-	site := siteName
-	if site == "" && ref.Site != "" {
-		site = ref.Site
-	}
-
-	clients, err := auth.NewClients(site)
+	clients, err := auth.NewClients(resolveSite(ref.Site))
 	if err != nil {
 		return err
 	}
-
-	ctx := context.Background()
 
 	pageID, err := strconv.Atoi(ref.PageID)
 	if err != nil {
@@ -85,7 +78,7 @@ func runConfluencePageGet(_ *cobra.Command, args []string) error {
 		bodyFormat = "atlas_doc_format"
 	}
 
-	page, _, err := clients.ConfluenceV2.Page.Get(ctx, pageID, bodyFormat, false, 0)
+	page, _, err := clients.ConfluenceV2.Page.Get(context.Background(), pageID, bodyFormat, false, 0)
 	if err != nil {
 		return fmt.Errorf("cannot get page: %w", err)
 	}
@@ -97,7 +90,7 @@ func runConfluencePageGet(_ *cobra.Command, args []string) error {
 	}
 
 	if pageAttachments {
-		attachments, _, err := clients.ConfluenceV2.Attachment.Gets(ctx, pageID, "pages", nil, "", 50)
+		attachments, _, err := clients.ConfluenceV2.Attachment.Gets(context.Background(), pageID, "pages", nil, "", 50)
 		if err != nil {
 			fmt.Printf("\n*Cannot load attachments: %v*\n", err)
 		} else {
@@ -114,15 +107,13 @@ func runConfluenceSearch(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	ctx := context.Background()
-
-	// Build CQL query
-	cql := fmt.Sprintf("type = page AND text ~ \"%s\"", args[0])
+	cql := `type = page`
 	if searchSpace != "" {
-		cql = fmt.Sprintf("type = page AND space = \"%s\" AND text ~ \"%s\"", searchSpace, args[0])
+		cql += fmt.Sprintf(` AND space = "%s"`, searchSpace)
 	}
+	cql += fmt.Sprintf(` AND text ~ "%s"`, args[0])
 
-	results, _, err := clients.ConfluenceV1.Search.Content(ctx, cql, &models.SearchContentOptions{
+	results, _, err := clients.ConfluenceV1.Search.Content(context.Background(), cql, &models.SearchContentOptions{
 		Limit: searchMaxConf,
 	})
 	if err != nil {

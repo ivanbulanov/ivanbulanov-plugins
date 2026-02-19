@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/ctreminiom/go-atlassian/v2/pkg/infra/models"
@@ -53,18 +53,12 @@ func runJiraCommentList(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid issue reference: %s", args[0])
 	}
 
-	site := siteName
-	if site == "" && ref.Site != "" {
-		site = ref.Site
-	}
-
-	clients, err := auth.NewClients(site)
+	clients, err := auth.NewClients(resolveSite(ref.Site))
 	if err != nil {
 		return err
 	}
 
-	ctx := context.Background()
-	comments, _, err := clients.Jira.Issue.Comment.Gets(ctx, ref.IssueKey, "", nil, 0, 50)
+	comments, _, err := clients.Jira.Issue.Comment.Gets(context.Background(), ref.IssueKey, "", nil, 0, 50)
 	if err != nil {
 		return fmt.Errorf("cannot list comments: %w", err)
 	}
@@ -81,31 +75,24 @@ func runJiraCommentAdd(_ *cobra.Command, args []string) error {
 
 	body := commentBody
 	if commentStdin {
-		scanner := bufio.NewScanner(os.Stdin)
-		var lines string
-		for scanner.Scan() {
-			lines += scanner.Text() + "\n"
+		data, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			return fmt.Errorf("cannot read stdin: %w", err)
 		}
-		body = lines
+		body = string(data)
 	}
 
 	if body == "" {
 		return fmt.Errorf("comment body required (use --body or --stdin)")
 	}
 
-	site := siteName
-	if site == "" && ref.Site != "" {
-		site = ref.Site
-	}
-
-	clients, err := auth.NewClients(site)
+	clients, err := auth.NewClients(resolveSite(ref.Site))
 	if err != nil {
 		return err
 	}
 
-	ctx := context.Background()
 	payload := &models.CommentPayloadSchemeV2{Body: body}
-	comment, _, err := clients.Jira.Issue.Comment.Add(ctx, ref.IssueKey, payload, nil)
+	comment, _, err := clients.Jira.Issue.Comment.Add(context.Background(), ref.IssueKey, payload, nil)
 	if err != nil {
 		return fmt.Errorf("cannot add comment: %w", err)
 	}

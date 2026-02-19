@@ -4,10 +4,10 @@ import "testing"
 
 func TestParseJiraURL(t *testing.T) {
 	tests := []struct {
-		input   string
-		wantKey string
+		input    string
+		wantKey  string
 		wantSite string
-		wantOk  bool
+		wantOk   bool
 	}{
 		{"DEV-123", "DEV-123", "", true},
 		{"PROJ-1", "PROJ-1", "", true},
@@ -38,15 +38,16 @@ func TestParseJiraURL(t *testing.T) {
 
 func TestParseConfluenceURL(t *testing.T) {
 	tests := []struct {
-		input    string
-		wantID   string
-		wantSite string
-		wantOk   bool
+		input     string
+		wantID    string
+		wantSite  string
+		wantSpace string
+		wantOk    bool
 	}{
-		{"https://acme-corp.atlassian.net/wiki/spaces/ENG/pages/1234567890/API+Guidelines", "1234567890", "acme-corp.atlassian.net", true},
-		{"https://co.atlassian.net/wiki/spaces/DEV/pages/123456", "123456", "co.atlassian.net", true},
-		{"1234567890", "1234567890", "", true},
-		{"not-a-page", "", "", false},
+		{"https://acme-corp.atlassian.net/wiki/spaces/ENG/pages/1234567890/API+Guidelines", "1234567890", "acme-corp.atlassian.net", "ENG", true},
+		{"https://co.atlassian.net/wiki/spaces/DEV/pages/123456", "123456", "co.atlassian.net", "DEV", true},
+		{"1234567890", "1234567890", "", "", true},
+		{"not-a-page", "", "", "", false},
 	}
 
 	for _, tt := range tests {
@@ -63,6 +64,9 @@ func TestParseConfluenceURL(t *testing.T) {
 			}
 			if result.Site != tt.wantSite {
 				t.Errorf("Site = %q, want %q", result.Site, tt.wantSite)
+			}
+			if result.Space != tt.wantSpace {
+				t.Errorf("Space = %q, want %q", result.Space, tt.wantSpace)
 			}
 		})
 	}

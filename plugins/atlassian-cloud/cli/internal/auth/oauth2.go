@@ -86,7 +86,6 @@ func RunOAuthFlow(ctx context.Context, cfg *common.OAuth2Config) (*OAuthResult, 
 	defer func() {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
-		// Ignoring shutdown error intentionally; this is best-effort cleanup.
 		_ = server.Shutdown(shutdownCtx)
 	}()
 
@@ -95,7 +94,7 @@ func RunOAuthFlow(ctx context.Context, cfg *common.OAuth2Config) (*OAuthResult, 
 		return nil, fmt.Errorf("cannot build authorization URL: %w", err)
 	}
 
-	fmt.Printf("Opening browser for authorization...\n")
+	fmt.Println("Opening browser for authorization...")
 	fmt.Printf("If the browser doesn't open, visit:\n%s\n\n", authURL.String())
 	openBrowser(authURL.String())
 
@@ -140,15 +139,9 @@ func exchangeAndFetch(ctx context.Context, svc *oauth2.Service, code string) (*O
 }
 
 func openBrowser(url string) {
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "linux":
-		cmd = exec.Command("xdg-open", url)
-	case "darwin":
-		cmd = exec.Command("open", url)
-	default:
-		cmd = exec.Command("xdg-open", url)
+	name := "xdg-open"
+	if runtime.GOOS == "darwin" {
+		name = "open"
 	}
-	// Fire-and-forget; failure is non-fatal because the URL is printed.
-	_ = cmd.Start()
+	_ = exec.Command(name, url).Start()
 }

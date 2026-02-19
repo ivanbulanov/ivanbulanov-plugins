@@ -68,19 +68,11 @@ func runJiraIssueGet(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid issue reference: %s", args[0])
 	}
 
-	site := siteName
-	if site == "" && ref.Site != "" {
-		site = ref.Site
-	}
-
-	clients, err := auth.NewClients(site)
+	clients, err := auth.NewClients(resolveSite(ref.Site))
 	if err != nil {
 		return err
 	}
 
-	ctx := context.Background()
-
-	// Build fields list
 	fields := []string{"summary", "status", "issuetype", "priority", "assignee", "reporter", "project", "labels", "created", "updated"}
 	if issueDescription || issueAllFields {
 		fields = append(fields, "description")
@@ -92,7 +84,7 @@ func runJiraIssueGet(_ *cobra.Command, args []string) error {
 		fields = append(fields, "attachment")
 	}
 
-	issue, response, err := clients.Jira.Issue.Get(ctx, ref.IssueKey, fields, nil)
+	issue, response, err := clients.Jira.Issue.Get(context.Background(), ref.IssueKey, fields, nil)
 	if err != nil {
 		if response != nil && response.Code == 404 {
 			return fmt.Errorf("issue %s not found", ref.IssueKey)
@@ -104,7 +96,6 @@ func runJiraIssueGet(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("cannot get issue: %w", err)
 	}
 
-	// Output
 	fmt.Print(output.FormatIssueSummary(issue))
 
 	if (issueDescription || issueAllFields) && issue.Fields.Description != "" {
@@ -128,14 +119,12 @@ func runJiraSearch(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	ctx := context.Background()
-
 	fields := []string{"summary", "status", "assignee"}
 	if searchDescription {
 		fields = append(fields, "description")
 	}
 
-	results, _, err := clients.Jira.Issue.Search.SearchJQL(ctx, args[0], fields, nil, searchMax, "")
+	results, _, err := clients.Jira.Issue.Search.SearchJQL(context.Background(), args[0], fields, nil, searchMax, "")
 	if err != nil {
 		return fmt.Errorf("search failed: %w", err)
 	}

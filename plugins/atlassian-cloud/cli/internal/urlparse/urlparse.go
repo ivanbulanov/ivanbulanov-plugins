@@ -9,7 +9,7 @@ import (
 var (
 	issueKeyRe      = regexp.MustCompile(`^[A-Z][A-Z0-9]+-\d+$`)
 	jiraBrowseRe    = regexp.MustCompile(`/browse/([A-Z][A-Z0-9]+-\d+)`)
-	confluencePageRe = regexp.MustCompile(`/wiki/spaces/[^/]+/pages/(\d+)`)
+	confluencePageRe = regexp.MustCompile(`/wiki/spaces/([^/]+)/pages/(\d+)`)
 	numericRe       = regexp.MustCompile(`^\d+$`)
 )
 
@@ -70,23 +70,13 @@ func ParseConfluenceRef(input string) (ConfluenceRef, bool) {
 	}
 
 	matches := confluencePageRe.FindStringSubmatch(u.Path)
-	if len(matches) < 2 {
+	if len(matches) < 3 {
 		return ConfluenceRef{}, false
 	}
 
-	// Extract space key from path: /wiki/spaces/{SPACE}/pages/...
-	parts := strings.Split(u.Path, "/")
-	var space string
-	for i, p := range parts {
-		if p == "spaces" && i+1 < len(parts) {
-			space = parts[i+1]
-			break
-		}
-	}
-
 	return ConfluenceRef{
-		PageID: matches[1],
+		PageID: matches[2],
 		Site:   u.Host,
-		Space:  space,
+		Space:  matches[1],
 	}, true
 }

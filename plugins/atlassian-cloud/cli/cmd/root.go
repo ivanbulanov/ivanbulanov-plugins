@@ -7,7 +7,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// siteName is the global --site flag used by all commands to specify the Atlassian site.
 var siteName string
 
 var rootCmd = &cobra.Command{
@@ -25,4 +24,11 @@ func Execute() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func resolveSite(refSite string) string {
+	if siteName != "" {
+		return siteName
+	}
+	return refSite
 }

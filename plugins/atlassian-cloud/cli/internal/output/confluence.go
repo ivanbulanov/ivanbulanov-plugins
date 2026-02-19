@@ -10,16 +10,16 @@ import (
 func FormatPageSummary(page *models.PageScheme) string {
 	var sb strings.Builder
 
-	sb.WriteString(fmt.Sprintf("**%s**\n", page.Title))
-	sb.WriteString(fmt.Sprintf("**Page ID**: %s | **Space**: %s\n", page.ID, page.SpaceID))
+	fmt.Fprintf(&sb, "**%s**\n", page.Title)
+	fmt.Fprintf(&sb, "**Page ID**: %s | **Space**: %s\n", page.ID, page.SpaceID)
 
 	if page.Version != nil {
-		sb.WriteString(fmt.Sprintf("**Version**: %d\n", page.Version.Number))
+		fmt.Fprintf(&sb, "**Version**: %d\n", page.Version.Number)
 	}
 	if page.CreatedAt != "" {
-		sb.WriteString(fmt.Sprintf("**Created**: %s\n", page.CreatedAt))
+		fmt.Fprintf(&sb, "**Created**: %s\n", page.CreatedAt)
 	}
-	sb.WriteString(fmt.Sprintf("**Status**: %s\n", page.Status))
+	fmt.Fprintf(&sb, "**Status**: %s\n", page.Status)
 
 	return sb.String()
 }
@@ -40,14 +40,7 @@ func FormatPageBody(page *models.PageScheme) string {
 		return "\n*Empty page*\n"
 	}
 
-	// Try ADF conversion
-	md, err := ADFToMarkdown(raw)
-	if err == nil && md != "" {
-		return fmt.Sprintf("\n### Content\n\n%s", md)
-	}
-
-	// Fallback: raw content (may be storage format HTML)
-	return fmt.Sprintf("\n### Content\n\n%s\n", raw)
+	return renderADF(raw, "Content")
 }
 
 func FormatConfluenceAttachments(attachments []*models.AttachmentScheme) string {
@@ -56,13 +49,13 @@ func FormatConfluenceAttachments(attachments []*models.AttachmentScheme) string 
 	}
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("\n### Attachments (%d)\n\n", len(attachments)))
+	fmt.Fprintf(&sb, "\n### Attachments (%d)\n\n", len(attachments))
 
 	for _, a := range attachments {
 		size := formatSize(a.FileSize)
-		sb.WriteString(fmt.Sprintf("- **%s** (%s, %s)\n", a.Title, size, a.MediaType))
+		fmt.Fprintf(&sb, "- **%s** (%s, %s)\n", a.Title, size, a.MediaType)
 		if a.DownloadLink != "" {
-			sb.WriteString(fmt.Sprintf("  Download: %s\n", a.DownloadLink))
+			fmt.Fprintf(&sb, "  Download: %s\n", a.DownloadLink)
 		}
 	}
 
@@ -71,12 +64,12 @@ func FormatConfluenceAttachments(attachments []*models.AttachmentScheme) string 
 
 func FormatSearchResultsConfluence(results []*models.SearchResultScheme, total int) string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("**Found %d results** (showing %d)\n\n", total, len(results)))
+	fmt.Fprintf(&sb, "**Found %d results** (showing %d)\n\n", total, len(results))
 
 	for _, r := range results {
-		sb.WriteString(fmt.Sprintf("- **%s** — %s\n", r.Title, r.Excerpt))
+		fmt.Fprintf(&sb, "- **%s** — %s\n", r.Title, r.Excerpt)
 		if r.URL != "" {
-			sb.WriteString(fmt.Sprintf("  URL: %s\n", r.URL))
+			fmt.Fprintf(&sb, "  URL: %s\n", r.URL)
 		}
 		sb.WriteString("\n")
 	}

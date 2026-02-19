@@ -19,7 +19,6 @@ const (
 	// ExitCodeAuthRequired is returned when no valid authentication is available.
 	ExitCodeAuthRequired = 2
 
-	// tokenExpiryBuffer is how far before expiry we proactively refresh.
 	tokenExpiryBuffer = 5 * time.Minute
 )
 
@@ -64,99 +63,83 @@ func NewClients(site string) (*Clients, error) {
 }
 
 func newOAuth2Clients(cfg *config.AuthConfig, site string, siteAuth *config.SiteAuth) (*Clients, error) {
-	accessToken := siteAuth.AccessToken
-
-	// Refresh if the token is expired or about to expire.
-	if siteAuth.TokenExpiry != "" {
-		expiry, err := time.Parse(time.RFC3339, siteAuth.TokenExpiry)
-		if err == nil && time.Now().Add(tokenExpiryBuffer).After(expiry) {
-			oauthCfg := LoadOAuthConfigFromEnv()
-			if oauthCfg == nil {
-				return nil, fmt.Errorf("ATLASSIAN_CLIENT_ID and ATLASSIAN_CLIENT_SECRET required for token refresh")
-			}
-			token, err := RefreshAccessToken(context.Background(), oauthCfg, siteAuth.RefreshToken)
-			if err != nil {
-				return nil, fmt.Errorf("cannot refresh token: %w", err)
-			}
-			accessToken = token.AccessToken
-
-			// Persist the refreshed token.
-			siteAuth.AccessToken = token.AccessToken
-			if token.RefreshToken != "" {
-				siteAuth.RefreshToken = token.RefreshToken
-			}
-			siteAuth.TokenExpiry = time.Now().Add(time.Duration(token.ExpiresIn) * time.Second).Format(time.RFC3339)
-			cfg.Sites[site] = *siteAuth
-			if saveErr := config.SaveAuthConfig(cfg); saveErr != nil {
-				fmt.Fprintf(os.Stderr, "Warning: could not persist refreshed token: %v\n", saveErr)
-			}
-		}
+	accessToken, err := refreshTokenIfNeeded(cfg, site, siteAuth)
+	if err != nil {
+		return nil, err
 	}
 
 	cloudID := siteAuth.CloudID
-	jiraSiteURL := fmt.Sprintf("https://api.atlassian.com/ex/jira/%s", cloudID)
-	confluenceSiteURL := fmt.Sprintf("https://api.atlassian.com/ex/confluence/%s", cloudID)
+	jiraURL := fmt.Sprintf("https://api.atlassian.com/ex/jira/%s", cloudID)
+	confluenceURL := fmt.Sprintf("https://api.atlassian.com/ex/confluence/%s", cloudID)
 
-	setBearerToken := func(auth common.Authentication) {
-		auth.SetBearerToken(accessToken)
-	}
-
-	jiraClient, err := jira.New(http.DefaultClient, jiraSiteURL)
-	if err != nil {
-		return nil, fmt.Errorf("cannot create Jira client: %w", err)
-	}
-	setBearerToken(jiraClient.Auth)
-
-	confV1, err := confluence.New(http.DefaultClient, confluenceSiteURL)
-	if err != nil {
-		return nil, fmt.Errorf("cannot create Confluence v1 client: %w", err)
-	}
-	setBearerToken(confV1.Auth)
-
-	confV2, err := confluencev2.New(http.DefaultClient, confluenceSiteURL)
-	if err != nil {
-		return nil, fmt.Errorf("cannot create Confluence v2 client: %w", err)
-	}
-	setBearerToken(confV2.Auth)
-
-	return &Clients{
-		Jira:         jiraClient,
-		ConfluenceV1: confV1,
-		ConfluenceV2: confV2,
-		SiteURL:      jiraSiteURL,
-	}, nil
+	return buildClients(jiraURL, confluenceURL, func(a common.Authentication) {
+		a.SetBearerToken(accessToken)
+	})
 }
 
 func newTokenClients(site string, siteAuth *config.SiteAuth) (*Clients, error) {
 	siteURL := fmt.Sprintf("https://%s", site)
+	return buildClients(siteURL, siteURL, func(a common.Authentication) {
+		a.SetBasicAuth(siteAuth.Email, siteAuth.APIToken)
+	})
+}
 
-	setBasicAuth := func(auth common.Authentication) {
-		auth.SetBasicAuth(siteAuth.Email, siteAuth.APIToken)
-	}
-
-	jiraClient, err := jira.New(http.DefaultClient, siteURL)
+func buildClients(jiraURL, confluenceURL string, configureAuth func(common.Authentication)) (*Clients, error) {
+	jiraClient, err := jira.New(http.DefaultClient, jiraURL)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create Jira client: %w", err)
 	}
-	setBasicAuth(jiraClient.Auth)
+	configureAuth(jiraClient.Auth)
 
-	confV1, err := confluence.New(http.DefaultClient, siteURL)
+	confV1, err := confluence.New(http.DefaultClient, confluenceURL)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create Confluence v1 client: %w", err)
 	}
-	setBasicAuth(confV1.Auth)
+	configureAuth(confV1.Auth)
 
-	confV2, err := confluencev2.New(http.DefaultClient, siteURL)
+	confV2, err := confluencev2.New(http.DefaultClient, confluenceURL)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create Confluence v2 client: %w", err)
 	}
-	setBasicAuth(confV2.Auth)
+	configureAuth(confV2.Auth)
 
 	return &Clients{
 		Jira:         jiraClient,
 		ConfluenceV1: confV1,
 		ConfluenceV2: confV2,
-		SiteURL:      siteURL,
+		SiteURL:      jiraURL,
 	}, nil
 }
 
+func refreshTokenIfNeeded(cfg *config.AuthConfig, site string, siteAuth *config.SiteAuth) (string, error) {
+	if siteAuth.TokenExpiry == "" {
+		return siteAuth.AccessToken, nil
+	}
+
+	expiry, err := time.Parse(time.RFC3339, siteAuth.TokenExpiry)
+	if err != nil || !time.Now().Add(tokenExpiryBuffer).After(expiry) {
+		return siteAuth.AccessToken, nil
+	}
+
+	oauthCfg := LoadOAuthConfigFromEnv()
+	if oauthCfg == nil {
+		return "", fmt.Errorf("ATLASSIAN_CLIENT_ID and ATLASSIAN_CLIENT_SECRET required for token refresh")
+	}
+
+	token, err := RefreshAccessToken(context.Background(), oauthCfg, siteAuth.RefreshToken)
+	if err != nil {
+		return "", fmt.Errorf("cannot refresh token: %w", err)
+	}
+
+	siteAuth.AccessToken = token.AccessToken
+	if token.RefreshToken != "" {
+		siteAuth.RefreshToken = token.RefreshToken
+	}
+	siteAuth.TokenExpiry = time.Now().Add(time.Duration(token.ExpiresIn) * time.Second).Format(time.RFC3339)
+	cfg.Sites[site] = *siteAuth
+	if saveErr := config.SaveAuthConfig(cfg); saveErr != nil {
+		fmt.Fprintf(os.Stderr, "Warning: could not persist refreshed token: %v\n", saveErr)
+	}
+
+	return token.AccessToken, nil
+}

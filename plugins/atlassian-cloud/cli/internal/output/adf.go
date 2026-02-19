@@ -25,8 +25,6 @@ type adfMark struct {
 	Attrs map[string]any `json:"attrs,omitempty"`
 }
 
-// attrString extracts a string attribute from an ADF attrs map,
-// returning defaultVal if the key is missing or not a string.
 func attrString(attrs map[string]any, key, defaultVal string) string {
 	if v, ok := attrs[key]; ok {
 		if s, ok := v.(string); ok {
@@ -36,8 +34,6 @@ func attrString(attrs map[string]any, key, defaultVal string) string {
 	return defaultVal
 }
 
-// attrInt extracts a numeric attribute (JSON float64) as an int,
-// returning defaultVal if the key is missing or not a number.
 func attrInt(attrs map[string]any, key string, defaultVal int) int {
 	if v, ok := attrs[key]; ok {
 		if f, ok := v.(float64); ok {
@@ -60,6 +56,13 @@ func ADFToMarkdown(adfJSON string) (string, error) {
 	return sb.String(), nil
 }
 
+func renderADF(raw, heading string) string {
+	if md, err := ADFToMarkdown(raw); err == nil && md != "" {
+		return fmt.Sprintf("\n### %s\n\n%s", heading, md)
+	}
+	return fmt.Sprintf("\n### %s\n\n%s\n", heading, raw)
+}
+
 func convertNode(sb *strings.Builder, node adfNode, prefix string) {
 	switch node.Type {
 	case "paragraph":
@@ -76,9 +79,7 @@ func convertNode(sb *strings.Builder, node adfNode, prefix string) {
 
 	case "codeBlock":
 		lang := attrString(node.Attrs, "language", "")
-		sb.WriteString("```")
-		sb.WriteString(lang)
-		sb.WriteString("\n")
+		fmt.Fprintf(sb, "```%s\n", lang)
 		for _, child := range node.Content {
 			sb.WriteString(child.Text)
 		}
@@ -224,7 +225,6 @@ func convertTable(sb *strings.Builder, node adfNode) {
 		}
 		sb.WriteString("\n")
 
-		// Separator after first row (header)
 		if rowIdx == 0 {
 			sb.WriteString("|")
 			for range row.Content {

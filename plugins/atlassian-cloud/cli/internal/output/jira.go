@@ -11,42 +11,42 @@ import (
 func FormatIssueSummary(issue *models.IssueSchemeV2) string {
 	var sb strings.Builder
 
-	sb.WriteString(fmt.Sprintf("**%s**: %s\n", issue.Key, issue.Fields.Summary))
+	fmt.Fprintf(&sb, "**%s**: %s\n", issue.Key, issue.Fields.Summary)
 
 	if issue.Fields.Status != nil {
-		sb.WriteString(fmt.Sprintf("**Status**: %s", issue.Fields.Status.Name))
+		fmt.Fprintf(&sb, "**Status**: %s", issue.Fields.Status.Name)
 	}
 	if issue.Fields.IssueType != nil {
-		sb.WriteString(fmt.Sprintf(" | **Type**: %s", issue.Fields.IssueType.Name))
+		fmt.Fprintf(&sb, " | **Type**: %s", issue.Fields.IssueType.Name)
 	}
 	if issue.Fields.Priority != nil {
-		sb.WriteString(fmt.Sprintf(" | **Priority**: %s", issue.Fields.Priority.Name))
+		fmt.Fprintf(&sb, " | **Priority**: %s", issue.Fields.Priority.Name)
 	}
 	sb.WriteString("\n")
 
 	if issue.Fields.Assignee != nil {
-		sb.WriteString(fmt.Sprintf("**Assignee**: %s\n", issue.Fields.Assignee.DisplayName))
+		fmt.Fprintf(&sb, "**Assignee**: %s\n", issue.Fields.Assignee.DisplayName)
 	} else {
 		sb.WriteString("**Assignee**: Unassigned\n")
 	}
 
 	if issue.Fields.Reporter != nil {
-		sb.WriteString(fmt.Sprintf("**Reporter**: %s\n", issue.Fields.Reporter.DisplayName))
+		fmt.Fprintf(&sb, "**Reporter**: %s\n", issue.Fields.Reporter.DisplayName)
 	}
 
 	if issue.Fields.Project != nil {
-		sb.WriteString(fmt.Sprintf("**Project**: %s (%s)\n", issue.Fields.Project.Name, issue.Fields.Project.Key))
+		fmt.Fprintf(&sb, "**Project**: %s (%s)\n", issue.Fields.Project.Name, issue.Fields.Project.Key)
 	}
 
 	if len(issue.Fields.Labels) > 0 {
-		sb.WriteString(fmt.Sprintf("**Labels**: %s\n", strings.Join(issue.Fields.Labels, ", ")))
+		fmt.Fprintf(&sb, "**Labels**: %s\n", strings.Join(issue.Fields.Labels, ", "))
 	}
 
 	if issue.Fields.Created != nil {
-		sb.WriteString(fmt.Sprintf("**Created**: %s\n", formatDateTime(issue.Fields.Created)))
+		fmt.Fprintf(&sb, "**Created**: %s\n", formatDateTime(issue.Fields.Created))
 	}
 	if issue.Fields.Updated != nil {
-		sb.WriteString(fmt.Sprintf("**Updated**: %s\n", formatDateTime(issue.Fields.Updated)))
+		fmt.Fprintf(&sb, "**Updated**: %s\n", formatDateTime(issue.Fields.Updated))
 	}
 
 	return sb.String()
@@ -56,15 +56,7 @@ func FormatIssueDescription(description string) string {
 	if description == "" {
 		return "\n*No description*\n"
 	}
-
-	// Try ADF parsing first
-	md, err := ADFToMarkdown(description)
-	if err == nil && md != "" {
-		return fmt.Sprintf("\n### Description\n\n%s", md)
-	}
-
-	// Fallback: plain text
-	return fmt.Sprintf("\n### Description\n\n%s\n", description)
+	return renderADF(description, "Description")
 }
 
 func FormatComments(comments []*models.IssueCommentSchemeV2) string {
@@ -73,22 +65,21 @@ func FormatComments(comments []*models.IssueCommentSchemeV2) string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("\n### Comments (%d)\n\n", len(comments)))
+	fmt.Fprintf(&sb, "\n### Comments (%d)\n\n", len(comments))
 
 	for i, c := range comments {
 		author := "Unknown"
 		if c.Author != nil {
 			author = c.Author.DisplayName
 		}
-		sb.WriteString(fmt.Sprintf("%d. **%s** (%s):\n", i+1, author, c.Created))
+		fmt.Fprintf(&sb, "%d. **%s** (%s):\n", i+1, author, c.Created)
 
 		body := c.Body
 		if md, err := ADFToMarkdown(body); err == nil && md != "" {
 			body = md
 		}
-		// Indent comment body
 		for _, line := range strings.Split(strings.TrimRight(body, "\n"), "\n") {
-			sb.WriteString(fmt.Sprintf("   %s\n", line))
+			fmt.Fprintf(&sb, "   %s\n", line)
 		}
 		sb.WriteString("\n")
 	}
@@ -102,13 +93,13 @@ func FormatAttachments(attachments []*models.IssueAttachmentScheme) string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("\n### Attachments (%d)\n\n", len(attachments)))
+	fmt.Fprintf(&sb, "\n### Attachments (%d)\n\n", len(attachments))
 
 	for _, a := range attachments {
 		size := formatSize(a.Size)
-		sb.WriteString(fmt.Sprintf("- **%s** (%s, %s)\n", a.Filename, size, a.MimeType))
+		fmt.Fprintf(&sb, "- **%s** (%s, %s)\n", a.Filename, size, a.MimeType)
 		if a.Content != "" {
-			sb.WriteString(fmt.Sprintf("  Download: %s\n", a.Content))
+			fmt.Fprintf(&sb, "  Download: %s\n", a.Content)
 		}
 	}
 
@@ -117,7 +108,7 @@ func FormatAttachments(attachments []*models.IssueAttachmentScheme) string {
 
 func FormatSearchResults(issues []*models.IssueSchemeV2, total int) string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("**Found %d issues** (showing %d)\n\n", total, len(issues)))
+	fmt.Fprintf(&sb, "**Found %d issues** (showing %d)\n\n", total, len(issues))
 
 	sb.WriteString("| Key | Summary | Status | Assignee |\n")
 	sb.WriteString("|-----|---------|--------|----------|\n")
@@ -131,12 +122,12 @@ func FormatSearchResults(issues []*models.IssueSchemeV2, total int) string {
 		if issue.Fields.Status != nil {
 			status = issue.Fields.Status.Name
 		}
-		sb.WriteString(fmt.Sprintf("| %s | %s | %s | %s |\n",
+		fmt.Fprintf(&sb, "| %s | %s | %s | %s |\n",
 			issue.Key,
 			truncate(issue.Fields.Summary, 60),
 			status,
 			assignee,
-		))
+		)
 	}
 
 	return sb.String()

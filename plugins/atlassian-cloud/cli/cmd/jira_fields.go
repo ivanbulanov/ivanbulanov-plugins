@@ -31,8 +31,7 @@ func runJiraFieldsList(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	ctx := context.Background()
-	fields, _, err := clients.Jira.Issue.Field.Gets(ctx)
+	fields, _, err := clients.Jira.Issue.Field.Gets(context.Background())
 	if err != nil {
 		return fmt.Errorf("cannot list fields: %w", err)
 	}

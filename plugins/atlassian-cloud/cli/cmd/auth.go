@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -37,7 +36,6 @@ var authStatusCmd = &cobra.Command{
 	RunE:  runAuthStatus,
 }
 
-// Flags for the token command.
 var (
 	tokenEmail string
 	tokenToken string
@@ -81,7 +79,6 @@ func runAuthLogin(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("cannot load auth config: %w", err)
 	}
 
-	// Store credentials for each accessible site.
 	for _, resource := range result.Resources {
 		cfg.Sites[resource.Name] = config.SiteAuth{
 			Method:       "oauth2",
@@ -94,7 +91,6 @@ func runAuthLogin(_ *cobra.Command, _ []string) error {
 		fmt.Printf("Authenticated: %s (%s)\n", resource.Name, resource.URL)
 	}
 
-	// Set default site if not already configured.
 	if cfg.DefaultSite == "" {
 		cfg.DefaultSite = result.Resources[0].Name
 		fmt.Printf("Default site: %s\n", cfg.DefaultSite)
@@ -166,15 +162,4 @@ func runAuthStatus(_ *cobra.Command, _ []string) error {
 	}
 
 	return nil
-}
-
-// RequireClients is a helper for other commands to obtain authenticated clients.
-// It calls os.Exit with ExitCodeAuthRequired if no auth is available.
-func RequireClients(site string) *auth.Clients {
-	clients, err := auth.NewClients(site)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(auth.ExitCodeAuthRequired)
-	}
-	return clients
 }
