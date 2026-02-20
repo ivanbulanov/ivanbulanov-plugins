@@ -1,36 +1,23 @@
 ---
 name: atlassian-jira
 description: Use when the user asks to "fetch JIRA issue", "get ticket", "show DEV-123", "look up issue", "search jira", "find tickets", "comment on ticket", "add comment to issue", "update comment", "edit comment", or pastes a JIRA URL like "https://company.atlassian.net/browse/KEY-123". Also triggers on bare issue keys like "DEV-123" or "PROJ-456" in the user's message.
-version: 0.1.1
 ---
 
 # Jira Issue Operations via atlassian-cloud CLI
 
 Access Jira Cloud issues, comments, and search with progressive disclosure for context efficiency.
 
-## Prerequisites
+## Setup
 
-Use the **base directory** from the skill metadata header above to derive paths.
-
-Ensure the CLI binary is built (the script auto-detects paths):
+Run once at the start of any operation:
 
 ```bash
-<base-directory>/scripts/ensure-binary.sh
+<base-directory>/../../../scripts/setup.sh
 ```
 
-If this fails, guide the user to install Go (`mise install go@latest` or https://go.dev/dl/).
+This builds the CLI if needed and checks authentication. If it fails with a Go error, guide the user to install Go (`mise install go@latest` or https://go.dev/dl/).
 
-Set the CLI path (3 levels up from skill base to plugin root, then into cli/bin):
-```bash
-ATLASSIAN_CLI="<base-directory>/../../../cli/bin/atlassian-cloud"
-```
-
-## Authentication
-
-Check auth status first:
-```bash
-$ATLASSIAN_CLI auth status
-```
+**CLI path**: `<base-directory>/../../../cli/bin/atlassian-cloud` — shown as `atlassian-cloud` in examples below.
 
 If already authenticated, proceed to the operation. Otherwise, walk the user through setup.
 
@@ -54,12 +41,12 @@ Then ask: "Paste your API token here (it will be stored locally in `~/.config/at
 
 **Step 4: Run the auth command with the collected values.**
 ```bash
-$ATLASSIAN_CLI auth token --email <email> --token <token> --site <site>
+atlassian-cloud auth token --email <email> --token <token> --site <site>
 ```
 
 **Step 5: Verify.**
 ```bash
-$ATLASSIAN_CLI auth status
+atlassian-cloud auth status
 ```
 
 If successful, proceed with the original request. If it fails, check for typos in email/token/site.
@@ -69,12 +56,12 @@ If successful, proceed with the original request. If it fails, check for typos i
 Only suggest this if the user specifically wants browser-based login or is building an integration.
 Requires `ATLASSIAN_CLIENT_ID` and `ATLASSIAN_CLIENT_SECRET` environment variables from an OAuth 2.0 app at https://developer.atlassian.com/console/myapps/.
 ```bash
-$ATLASSIAN_CLI auth login
+atlassian-cloud auth login
 ```
 
 ### Re-authentication
 
-If any command exits with code 2, the token is invalid or expired. Run `$ATLASSIAN_CLI auth status` to diagnose, then repeat the setup if needed. API tokens don't expire unless revoked, so exit code 2 usually means the token was deleted or the email/site is wrong.
+If any command exits with code 2, the token is invalid or expired. Run `atlassian-cloud auth status` to diagnose, then repeat the setup if needed. API tokens don't expire unless revoked, so exit code 2 usually means the token was deleted or the email/site is wrong.
 
 ## Extracting Issue Keys
 
@@ -89,7 +76,7 @@ Pattern: `[A-Z][A-Z0-9]+-\d+`
 
 When a URL includes the site hostname, pass it with `--site`:
 ```bash
-$ATLASSIAN_CLI --site acme-corp.atlassian.net jira issue get ACME-5136
+atlassian-cloud --site acme-corp.atlassian.net jira issue get ACME-5136
 ```
 
 ## Progressive Disclosure — ALWAYS Start at Level 1
@@ -97,7 +84,7 @@ $ATLASSIAN_CLI --site acme-corp.atlassian.net jira issue get ACME-5136
 ### Level 1: Summary (default — use this first)
 
 ```bash
-$ATLASSIAN_CLI jira issue get KEY-123
+atlassian-cloud jira issue get KEY-123
 ```
 
 Returns: Key, Summary, Status, Type, Priority, Assignee, Reporter, Project, Labels, Created, Updated.
@@ -107,7 +94,7 @@ Returns: Key, Summary, Status, Type, Priority, Assignee, Reporter, Project, Labe
 ### Level 2: + Description
 
 ```bash
-$ATLASSIAN_CLI jira issue get KEY-123 --description
+atlassian-cloud jira issue get KEY-123 --description
 ```
 
 Adds the full issue description (ADF converted to markdown).
@@ -115,7 +102,7 @@ Adds the full issue description (ADF converted to markdown).
 ### Level 3: + Comments
 
 ```bash
-$ATLASSIAN_CLI jira issue get KEY-123 --description --comments
+atlassian-cloud jira issue get KEY-123 --description --comments
 ```
 
 Adds all comments with author and timestamp.
@@ -123,7 +110,7 @@ Adds all comments with author and timestamp.
 ### Level 4: + Attachments
 
 ```bash
-$ATLASSIAN_CLI jira issue get KEY-123 --description --comments --attachments
+atlassian-cloud jira issue get KEY-123 --description --comments --attachments
 ```
 
 Adds attachment list with filenames, sizes, and download URLs.
@@ -131,20 +118,20 @@ Adds attachment list with filenames, sizes, and download URLs.
 ### Full context
 
 ```bash
-$ATLASSIAN_CLI jira issue get KEY-123 --all-fields
+atlassian-cloud jira issue get KEY-123 --all-fields
 ```
 
 ## Searching Issues
 
 ```bash
 # Basic JQL search
-$ATLASSIAN_CLI jira search "project = DEV AND status = Open" --max 20
+atlassian-cloud jira search "project = DEV AND status = Open" --max 20
 
 # Text search
-$ATLASSIAN_CLI jira search "text ~ 'deployment error'" --max 10
+atlassian-cloud jira search "text ~ 'deployment error'" --max 10
 
 # With descriptions
-$ATLASSIAN_CLI jira search "assignee = currentUser() AND status != Done" --max 15 --description
+atlassian-cloud jira search "assignee = currentUser() AND status != Done" --max 15 --description
 ```
 
 Returns a markdown table: Key | Summary | Status | Assignee.
@@ -153,64 +140,64 @@ Returns a markdown table: Key | Summary | Status | Assignee.
 
 ### List comments
 ```bash
-$ATLASSIAN_CLI jira comment list KEY-123
+atlassian-cloud jira comment list KEY-123
 ```
 
 ### Add a comment
 ```bash
-$ATLASSIAN_CLI jira comment add KEY-123 --body "Fix deployed in v2.3.1"
+atlassian-cloud jira comment add KEY-123 --body "Fix deployed in v2.3.1"
 ```
 
 For longer comments:
 ```bash
-echo "Detailed analysis of the issue..." | $ATLASSIAN_CLI jira comment add KEY-123 --stdin
+echo "Detailed analysis of the issue..." | atlassian-cloud jira comment add KEY-123 --stdin
 ```
 
 ### Update a comment
 ```bash
-$ATLASSIAN_CLI jira comment update KEY-123 10042 --body "Updated analysis"
+atlassian-cloud jira comment update KEY-123 10042 --body "Updated analysis"
 ```
 
 Using a comment URL:
 ```bash
-$ATLASSIAN_CLI jira comment update "https://company.atlassian.net/browse/KEY-123?focusedCommentId=10042" --body "Updated text"
+atlassian-cloud jira comment update "https://company.atlassian.net/browse/KEY-123?focusedCommentId=10042" --body "Updated text"
 ```
 
 For longer updates:
 ```bash
-echo "Revised detailed analysis..." | $ATLASSIAN_CLI jira comment update KEY-123 10042 --stdin
+echo "Revised detailed analysis..." | atlassian-cloud jira comment update KEY-123 10042 --stdin
 ```
 
 ## Custom Fields
 
 ### Discover available fields
 ```bash
-$ATLASSIAN_CLI jira fields list
+atlassian-cloud jira fields list
 ```
 
 ### Request specific fields
 ```bash
-$ATLASSIAN_CLI jira issue get KEY-123 --fields "Story Points,Sprint,customfield_10001"
+atlassian-cloud jira issue get KEY-123 --fields "Story Points,Sprint,customfield_10001"
 ```
 
 ## Downloading Attachments
 
 ### Single attachment
 ```bash
-$ATLASSIAN_CLI jira attachment download KEY-123 report.pdf
+atlassian-cloud jira attachment download KEY-123 report.pdf
 ```
 
 Downloads to a temp directory and prints the file path.
 
 ### All attachments
 ```bash
-$ATLASSIAN_CLI jira attachment download KEY-123 --all
+atlassian-cloud jira attachment download KEY-123 --all
 ```
 
 ### Save to specific directory
 ```bash
-$ATLASSIAN_CLI jira attachment download KEY-123 report.pdf --output-dir ./downloads
-$ATLASSIAN_CLI jira attachment download KEY-123 --all --output-dir ./downloads
+atlassian-cloud jira attachment download KEY-123 report.pdf --output-dir ./downloads
+atlassian-cloud jira attachment download KEY-123 --all --output-dir ./downloads
 ```
 
 Output: one file path per line. The agent can use the Read tool to view downloaded files.
@@ -248,7 +235,7 @@ Structure clearly with headers:
 
 | Error | Action |
 |-------|--------|
-| Exit code 2 | Auth expired → `$ATLASSIAN_CLI auth login` |
+| Exit code 2 | Auth expired → `atlassian-cloud auth login` |
 | "issue not found" | Check key format, verify permissions |
 | "cannot connect" | Check network, verify site URL |
 | Build failure | Ensure Go is installed: `go version` |

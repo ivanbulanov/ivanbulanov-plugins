@@ -1,34 +1,23 @@
 ---
 name: atlassian-confluence
 description: Use when the user asks to "read confluence page", "get wiki page", "search confluence", "find in confluence", "look up documentation", or pastes a Confluence URL like "https://company.atlassian.net/wiki/spaces/SPACE/pages/123456/Page+Title". Also triggers when the user mentions Confluence page IDs or asks about company documentation on Confluence.
-version: 0.1.1
 ---
 
 # Confluence Page Operations via atlassian-cloud CLI
 
 Read Confluence Cloud pages and search content with progressive disclosure for context efficiency.
 
-## Prerequisites
+## Setup
 
-Use the **base directory** from the skill metadata header above to derive paths.
-
-Ensure the CLI binary is built (the script auto-detects paths):
+Run once at the start of any operation:
 
 ```bash
-<base-directory>/../atlassian-jira/scripts/ensure-binary.sh
+<base-directory>/../../../scripts/setup.sh
 ```
 
-Set the CLI path (3 levels up from skill base to plugin root, then into cli/bin):
-```bash
-ATLASSIAN_CLI="<base-directory>/../../../cli/bin/atlassian-cloud"
-```
+This builds the CLI if needed and checks authentication. If it fails with a Go error, guide the user to install Go (`mise install go@latest` or https://go.dev/dl/).
 
-## Authentication
-
-Check auth first:
-```bash
-$ATLASSIAN_CLI auth status
-```
+**CLI path**: `<base-directory>/../../../cli/bin/atlassian-cloud` — shown as `atlassian-cloud` in examples below.
 
 If not authenticated, follow the **Guided API Token Setup** in the atlassian-jira skill — the same auth config covers both Jira and Confluence.
 
@@ -42,7 +31,7 @@ If not authenticated, follow the **Guided API Token Setup** in the atlassian-jir
 
 When a URL includes the site hostname, pass it with `--site`:
 ```bash
-$ATLASSIAN_CLI --site acme-corp.atlassian.net confluence page get 1234567890
+atlassian-cloud --site acme-corp.atlassian.net confluence page get 1234567890
 ```
 
 ## Progressive Disclosure — ALWAYS Start at Level 1
@@ -50,7 +39,7 @@ $ATLASSIAN_CLI --site acme-corp.atlassian.net confluence page get 1234567890
 ### Level 1: Summary (default)
 
 ```bash
-$ATLASSIAN_CLI confluence page get <page-id-or-url>
+atlassian-cloud confluence page get <page-id-or-url>
 ```
 
 Returns: Title, Page ID, Space, Version, Created date, Status.
@@ -58,7 +47,7 @@ Returns: Title, Page ID, Space, Version, Created date, Status.
 ### Level 2: + Body
 
 ```bash
-$ATLASSIAN_CLI confluence page get <page-id-or-url> --body
+atlassian-cloud confluence page get <page-id-or-url> --body
 ```
 
 Adds full page content (ADF converted to markdown).
@@ -66,7 +55,7 @@ Adds full page content (ADF converted to markdown).
 ### Level 3: + Attachments
 
 ```bash
-$ATLASSIAN_CLI confluence page get <page-id-or-url> --body --attachments
+atlassian-cloud confluence page get <page-id-or-url> --body --attachments
 ```
 
 Adds attachment list.
@@ -75,10 +64,10 @@ Adds attachment list.
 
 ```bash
 # Full-text search
-$ATLASSIAN_CLI confluence search "deployment runbook" --max 10
+atlassian-cloud confluence search "deployment runbook" --max 10
 
 # Search within a specific space
-$ATLASSIAN_CLI confluence search "API documentation" --space WS --max 10
+atlassian-cloud confluence search "API documentation" --space WS --max 10
 ```
 
 Returns: Title, excerpt, URL for each result.
@@ -87,20 +76,20 @@ Returns: Title, excerpt, URL for each result.
 
 ### Single attachment
 ```bash
-$ATLASSIAN_CLI confluence attachment download <page-id-or-url> diagram.png
+atlassian-cloud confluence attachment download <page-id-or-url> diagram.png
 ```
 
 Downloads to a temp directory and prints the file path.
 
 ### All attachments
 ```bash
-$ATLASSIAN_CLI confluence attachment download <page-id-or-url> --all
+atlassian-cloud confluence attachment download <page-id-or-url> --all
 ```
 
 ### Save to specific directory
 ```bash
-$ATLASSIAN_CLI confluence attachment download <page-id-or-url> diagram.png --output-dir ./downloads
-$ATLASSIAN_CLI confluence attachment download <page-id-or-url> --all --output-dir ./downloads
+atlassian-cloud confluence attachment download <page-id-or-url> diagram.png --output-dir ./downloads
+atlassian-cloud confluence attachment download <page-id-or-url> --all --output-dir ./downloads
 ```
 
 Output: one file path per line. The agent can use the Read tool to view downloaded files.
@@ -129,7 +118,7 @@ Structure with headers:
 
 | Error | Action |
 |-------|--------|
-| Exit code 2 | Auth expired → `$ATLASSIAN_CLI auth login` |
+| Exit code 2 | Auth expired → `atlassian-cloud auth login` |
 | "page not found" | Verify page ID, check permissions |
 | "invalid page ID" | Ensure numeric ID extracted from URL |
 
