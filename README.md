@@ -6,7 +6,17 @@ A collection of Claude Code plugins for productivity and integrations.
 
 | Plugin | Description | Category |
 |--------|-------------|----------|
-| [acli-jira](./plugins/acli-jira) | Retrieve JIRA issues using acli CLI with token-efficient output and ADF parsing | Productivity |
+| [atlassian-cloud](./plugins/atlassian-cloud) | Jira and Confluence Cloud access via Go CLI with OAuth2, progressive disclosure, and ADF-to-markdown conversion | Productivity |
+| [redis-reader](./plugins/redis-reader) | Read-only Redis querying with command allowlisting, output size control, and cluster support | Productivity |
+
+<details>
+<summary>Deprecated plugins</summary>
+
+| Plugin | Description | Superseded by |
+|--------|-------------|---------------|
+| [acli-jira](./plugins/acli-jira) | JIRA issue retrieval using acli CLI | [atlassian-cloud](./plugins/atlassian-cloud) |
+
+</details>
 
 ## Installation
 
@@ -19,13 +29,13 @@ claude plugin marketplace add ivanbulanov/ivanbulanov-plugins
 ### 2. Install a plugin
 
 ```bash
-claude plugin install acli-jira@ivanbulanov-plugins
+claude plugin install atlassian-cloud@ivanbulanov-plugins
 ```
 
 ### 3. Enable the plugin
 
 ```bash
-claude plugin enable acli-jira@ivanbulanov-plugins
+claude plugin enable atlassian-cloud@ivanbulanov-plugins
 ```
 
 ### 4. Restart Claude Code
@@ -36,7 +46,7 @@ Restart your Claude Code session to load the new plugin.
 
 ```bash
 claude plugin marketplace update ivanbulanov-plugins
-claude plugin update acli-jira@ivanbulanov-plugins
+claude plugin update atlassian-cloud@ivanbulanov-plugins
 ```
 
 ## Plugin Development
