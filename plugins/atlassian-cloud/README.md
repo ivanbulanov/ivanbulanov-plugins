@@ -18,18 +18,28 @@ Context-efficient Jira and Confluence Cloud access for Claude Code via a Go CLI 
 
 ## Setup
 
-### 1. Build
+The CLI builds automatically on first skill invocation, and the skills guide you through authentication interactively — just start using a Jira or Confluence skill and follow the prompts.
 
-The CLI builds automatically on first skill invocation. Or build manually:
+To build or authenticate manually, see below.
+
+<details>
+<summary>Manual build</summary>
 
 ```bash
 cd plugins/atlassian-cloud/cli
 go build -o bin/atlassian-cloud .
 ```
+</details>
 
-### 2. Authenticate
+<details>
+<summary>Manual authentication</summary>
 
-**OAuth2 (recommended):**
+**API Token (recommended):**
+
+1. Generate token at https://id.atlassian.com/manage-profile/security/api-tokens
+2. Run: `atlassian-cloud auth token --email you@company.com --token YOUR_TOKEN --site company.atlassian.net`
+
+**OAuth2 (for apps or shared environments):**
 
 1. Create an OAuth app at https://developer.atlassian.com/console/myapps/
 2. Set callback URL to `http://localhost:19872/callback`
@@ -40,42 +50,28 @@ go build -o bin/atlassian-cloud .
    export ATLASSIAN_CLIENT_SECRET=your-client-secret
    ```
 5. Run: `atlassian-cloud auth login`
-
-**API Token (simpler):**
-
-1. Generate token at https://id.atlassian.com/manage-profile/security/api-tokens
-2. Run: `atlassian-cloud auth token --email you@company.com --token YOUR_TOKEN --site company.atlassian.net`
+</details>
 
 ## Usage
 
+Just talk to Claude naturally — the skills trigger automatically.
+
 ### Jira
 
-```bash
-# Get issue summary
-atlassian-cloud jira issue get DEV-123
-
-# Get issue with description and comments
-atlassian-cloud jira issue get DEV-123 --description --comments
-
-# Search
-atlassian-cloud jira search "project = DEV AND status = Open"
-
-# Add comment
-atlassian-cloud jira comment add DEV-123 --body "Fix deployed"
-```
+- Paste a Jira URL: `https://acme.atlassian.net/browse/ACME-123`
+- Mention an issue key: "What's the status of FE-42?" (any project prefix works)
+- Search: "Find open bugs in the INFRA project"
+- Comment: "Add a comment to K8S-7 saying the fix is deployed"
 
 ### Confluence
 
-```bash
-# Get page summary
-atlassian-cloud confluence page get https://co.atlassian.net/wiki/spaces/ENG/pages/123456/Page
+- Paste a Confluence URL: `https://acme.atlassian.net/wiki/spaces/ENG/pages/123456/Page`
+- Search: "Search Confluence for the deployment runbook"
+- Read: "Get the full content of Confluence page 123456"
 
-# Get full page content
-atlassian-cloud confluence page get 123456 --body
+### Progressive disclosure
 
-# Search
-atlassian-cloud confluence search "deployment guide" --space WS
-```
+The skills fetch minimal data first (summary only) and escalate to full details only when needed, keeping context usage efficient.
 
 ## Security
 
