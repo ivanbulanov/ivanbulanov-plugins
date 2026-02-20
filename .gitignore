@@ -1,5 +1,6 @@
 # Local configuration
-.claude/*.local.md
+.claude/
+docs/plans/
 
 # OS files
 .DS_Store
