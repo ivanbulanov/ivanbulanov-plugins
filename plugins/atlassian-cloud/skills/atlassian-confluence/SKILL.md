@@ -21,6 +21,8 @@ This builds the CLI if needed and checks authentication. If it fails with a Go e
 
 If not authenticated, follow the **Guided API Token Setup** in the atlassian-jira skill — the same auth config covers both Jira and Confluence.
 
+**Sandboxing:** If you have enabled Claude Code's Bash sandbox (it is off by default), the build step and the CLI need network access. See the plugin README's **Sandboxing** section for the `settings.json` allowlist.
+
 ## Extracting Page References
 
 | Input | Extracted |

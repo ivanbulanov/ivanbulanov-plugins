@@ -52,6 +52,28 @@ go build -o bin/atlassian-cloud .
 5. Run: `atlassian-cloud auth login`
 </details>
 
+## Sandboxing
+
+Claude Code's Bash sandbox is **off by default**, so no configuration is needed in the common case. If you have enabled the sandbox (`"sandbox": { "enabled": true }` in `settings.json`), the plugin's setup script and CLI need network access that the sandbox otherwise blocks:
+
+- `scripts/setup.sh` runs `go build`, which fetches modules from the Go module proxy.
+- The CLI makes outbound HTTPS calls to your Atlassian site and the media CDN.
+
+Grant just those hosts — this keeps filesystem isolation intact:
+
+```json
+{
+  "sandbox": {
+    "allowedDomains": [
+      "proxy.golang.org", "sum.golang.org",
+      "*.atlassian.net", "api.atlassian.com", "api.media.atlassian.com"
+    ]
+  }
+}
+```
+
+A plugin cannot declare sandbox exemptions for itself — sandbox configuration is user-side only, in `settings.json`. If you would rather run the commands fully outside the sandbox than allowlist hosts, add them to `sandbox.excludedCommands` instead.
+
 ## Usage
 
 Just talk to Claude naturally — the skills trigger automatically.

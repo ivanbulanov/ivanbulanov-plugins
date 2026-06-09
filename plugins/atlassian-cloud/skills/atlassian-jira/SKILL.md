@@ -63,6 +63,8 @@ atlassian-cloud auth login
 
 If any command exits with code 2, the token is invalid or expired. Run `atlassian-cloud auth status` to diagnose, then repeat the setup if needed. API tokens don't expire unless revoked, so exit code 2 usually means the token was deleted or the email/site is wrong.
 
+**Sandboxing:** If you have enabled Claude Code's Bash sandbox (it is off by default), the build step and the CLI need network access. See the plugin README's **Sandboxing** section for the `settings.json` allowlist.
+
 ## Extracting Issue Keys
 
 | Input | Extracted |
