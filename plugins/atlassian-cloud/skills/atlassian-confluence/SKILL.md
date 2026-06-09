@@ -94,6 +94,25 @@ atlassian-cloud confluence attachment download <page-id-or-url> --all --output-d
 
 Output: one file path per line. The agent can use the Read tool to view downloaded files.
 
+### View page images with their placement
+
+To see a page's images and where they appear in the document:
+
+1. Fetch body and attachments:
+   ```bash
+   atlassian-cloud confluence page get <page-id-or-url> --body --attachments
+   ```
+   In the rendered body, images appear in document order as `![<filename>](attachment:<id>)`. The alt text is the attachment filename; surrounding headings and table cells show where each image sits on the page.
+
+2. Download the image files:
+   ```bash
+   atlassian-cloud confluence attachment download <page-id-or-url> --all --output-dir <dir>
+   ```
+
+3. Use the Read tool on each downloaded file to view it, and match it to its placement using the filename from step 1.
+
+**Note:** Works with scoped API tokens — downloads use the REST content endpoint and follow the media redirect without leaking credentials.
+
 ## Presenting Results
 
 ### For page summaries

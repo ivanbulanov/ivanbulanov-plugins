@@ -93,7 +93,7 @@ func newOAuth2Clients(cfg *config.AuthConfig, site string, siteAuth *config.Site
 	confluenceURL := fmt.Sprintf("https://api.atlassian.com/ex/confluence/%s", cloudID)
 
 	httpClient := &http.Client{
-		Transport: &bearerTransport{token: accessToken},
+		Transport: &bearerTransport{host: "api.atlassian.com", token: accessToken},
 	}
 
 	return buildClients(jiraURL, confluenceURL, func(a common.Authentication) {
@@ -105,7 +105,7 @@ func newTokenClients(site string, siteAuth *config.SiteAuth) (*Clients, error) {
 	siteURL := fmt.Sprintf("https://%s", site)
 
 	httpClient := &http.Client{
-		Transport: &basicAuthTransport{email: siteAuth.Email, token: siteAuth.APIToken},
+		Transport: &basicAuthTransport{host: site, email: siteAuth.Email, token: siteAuth.APIToken},
 	}
 
 	return buildClients(siteURL, siteURL, func(a common.Authentication) {
@@ -143,23 +143,33 @@ func buildClients(jiraURL, confluenceURL string, configureAuth func(common.Authe
 }
 
 type bearerTransport struct {
+	host  string
 	token string
 }
 
 func (t *bearerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req = req.Clone(req.Context())
-	req.Header.Set("Authorization", "Bearer "+t.token)
+	// Only attach credentials for the API host; attachment downloads redirect
+	// to a media CDN on a different host that must not receive our token.
+	if req.URL.Host == t.host {
+		req.Header.Set("Authorization", "Bearer "+t.token)
+	}
 	return http.DefaultTransport.RoundTrip(req)
 }
 
 type basicAuthTransport struct {
+	host  string
 	email string
 	token string
 }
 
 func (t *basicAuthTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req = req.Clone(req.Context())
-	req.SetBasicAuth(t.email, t.token)
+	// Only attach credentials for the API host; attachment downloads redirect
+	// to a media CDN on a different host that must not receive our credentials.
+	if req.URL.Host == t.host {
+		req.SetBasicAuth(t.email, t.token)
+	}
 	return http.DefaultTransport.RoundTrip(req)
 }
 
