@@ -106,9 +106,8 @@ func TestRestoreHardBreaksLeavesCodeAlone(t *testing.T) {
 }
 
 func TestStyleCodeBlocksAddsAllThreeParams(t *testing.T) {
-	in := `<ac:structured-macro ac:name="code" ac:schema-version="1">` +
-		`<ac:parameter ac:name="language">sql</ac:parameter>` +
-		`<ac:plain-text-body><![CDATA[SELECT 1]]></ac:plain-text-body></ac:structured-macro>`
+	// Long enough that the block genuinely needs to break out of the column.
+	in := codeMacro("SELECT " + strings.Repeat("a", 200))
 
 	got := StyleCodeBlocks(in)
 
@@ -121,14 +120,15 @@ func TestStyleCodeBlocksAddsAllThreeParams(t *testing.T) {
 			t.Errorf("missing %s in: %s", want, got)
 		}
 	}
-	if !strings.Contains(got, "SELECT 1") {
+	if !strings.Contains(got, "SELECT ") {
 		t.Errorf("body lost: %s", got)
 	}
 }
 
 func TestStyleCodeBlocksHandlesMacroWithoutLanguage(t *testing.T) {
 	in := `<ac:structured-macro ac:name="code" ac:schema-version="1">` +
-		`<ac:plain-text-body><![CDATA[bare fence]]></ac:plain-text-body></ac:structured-macro>`
+		`<ac:plain-text-body><![CDATA[bare fence ` + strings.Repeat("w", 200) +
+		`]]></ac:plain-text-body></ac:structured-macro>`
 
 	got := StyleCodeBlocks(in)
 
@@ -140,38 +140,54 @@ func TestStyleCodeBlocksHandlesMacroWithoutLanguage(t *testing.T) {
 }
 
 func TestStyleCodeBlocksIsIdempotent(t *testing.T) {
-	in := `<ac:structured-macro ac:name="code" ac:schema-version="1">` +
-		`<ac:plain-text-body><![CDATA[x]]></ac:plain-text-body></ac:structured-macro>`
-
-	once := StyleCodeBlocks(in)
-	twice := StyleCodeBlocks(once)
-
-	for _, name := range []string{"wrap", "breakoutMode", "breakoutWidth"} {
-		attr := `ac:name="` + name + `"`
-		if n := strings.Count(twice, attr); n != 1 {
-			t.Errorf("%s appears %d times after two applications, want 1: %s", name, n, twice)
-		}
+	// Both paths have to be stable: a narrow block gains only wrap, a wide one
+	// gains all three, and neither may accumulate duplicates on a second pass.
+	cases := map[string]struct {
+		body            string
+		wantBreakoutSet bool
+	}{
+		"narrow block": {"x", false},
+		"wide block":   {strings.Repeat("x", 200), true},
 	}
-	if once != twice {
-		t.Errorf("second application changed the output:\n got  %s\nwant  %s", twice, once)
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			once := StyleCodeBlocks(codeMacro(tc.body))
+			twice := StyleCodeBlocks(once)
+
+			if once != twice {
+				t.Errorf("second application changed the output:\n got  %s\nwant  %s", twice, once)
+			}
+			if n := strings.Count(twice, `ac:name="wrap"`); n != 1 {
+				t.Errorf("wrap appears %d times, want 1: %s", n, twice)
+			}
+			for _, name := range []string{"breakoutMode", "breakoutWidth"} {
+				want := 0
+				if tc.wantBreakoutSet {
+					want = 1
+				}
+				if n := strings.Count(twice, `ac:name="`+name+`"`); n != want {
+					t.Errorf("%s appears %d times, want %d: %s", name, n, want, twice)
+				}
+			}
+		})
 	}
 }
 
 func TestStyleCodeBlocksKeepsExistingBreakoutMode(t *testing.T) {
+	// Wide enough to reach the breakout branch, so an existing choice is
+	// genuinely at risk of being overwritten.
 	in := `<ac:structured-macro ac:name="code" ac:schema-version="1">` +
 		`<ac:parameter ac:name="breakoutMode">full-width</ac:parameter>` +
-		`<ac:plain-text-body><![CDATA[x]]></ac:plain-text-body></ac:structured-macro>`
+		`<ac:plain-text-body><![CDATA[` + strings.Repeat("x", 200) +
+		`]]></ac:plain-text-body></ac:structured-macro>`
 
 	got := StyleCodeBlocks(in)
 
 	if !strings.Contains(got, `<ac:parameter ac:name="breakoutMode">full-width</ac:parameter>`) {
-		t.Errorf("existing breakoutMode value must survive: %s", got)
+		t.Errorf("an existing breakout mode must be left alone: %s", got)
 	}
-	if n := strings.Count(got, `ac:name="breakoutMode"`); n != 1 {
-		t.Errorf("breakoutMode appears %d times, want 1: %s", n, got)
-	}
-	if !strings.Contains(got, `ac:name="wrap"`) || !strings.Contains(got, `ac:name="breakoutWidth"`) {
-		t.Errorf("wrap/breakoutWidth were absent and must still be added: %s", got)
+	if strings.Contains(got, `<ac:parameter ac:name="breakoutMode">wide</ac:parameter>`) {
+		t.Errorf("a second breakout mode was added: %s", got)
 	}
 }
 
@@ -187,5 +203,70 @@ func TestStyleCodeBlocksLeavesCDATALookalikeAlone(t *testing.T) {
 	}
 	if n := strings.Count(got, `ac:name="wrap"`); n != 1 {
 		t.Errorf("wrap appears %d times, want exactly 1 (only on the real macro): %s", n, got)
+	}
+}
+
+func codeMacro(body string) string {
+	return `<ac:structured-macro ac:name="code" ac:schema-version="1">` +
+		`<ac:parameter ac:name="language">sql</ac:parameter>` +
+		`<ac:plain-text-body><![CDATA[` + body + `]]></ac:plain-text-body>` +
+		`</ac:structured-macro>`
+}
+
+// Every block used to be widened to the same 1011px, so a four-line snippet
+// was stretched as wide as a sixty-line schema. Width now follows content.
+func TestCodeBlockWidthFollowsContent(t *testing.T) {
+	// 760px column minus 60px of gutter and padding leaves 700px of text room,
+	// which is 83 characters at 8.4px each.
+	tests := map[string]struct {
+		chars int
+		want  int
+	}{
+		"tiny snippet":      {16, 0},
+		"short request":     {41, 0},
+		"just inside":       {83, 0},
+		"just outside":      {84, 766},
+		"typical long line": {98, 884},
+		"enormous":          {432, codeMaxBreakout},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			if got := codeBlockWidth(strings.Repeat("x", tc.chars)); got != tc.want {
+				t.Errorf("codeBlockWidth(%d chars) = %d, want %d", tc.chars, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestCodeBlockWidthUsesTheLongestLine(t *testing.T) {
+	// 100 columns needs 60 + 840 = 900px, comfortably inside the 1011 cap, so
+	// this checks the measurement rather than the clamp.
+	body := "short\n" + strings.Repeat("y", 100) + "\nshort again\n"
+	if got, want := codeBlockWidth(body), 900; got != want {
+		t.Errorf("codeBlockWidth = %d, want %d", got, want)
+	}
+	// A tab draws as several columns, so it must not be counted as one.
+	plain := codeBlockWidth(strings.Repeat("z", 84))
+	tabbed := codeBlockWidth("\t" + strings.Repeat("z", 84))
+	if tabbed <= plain {
+		t.Errorf("tab-indented line measured %d, not wider than %d", tabbed, plain)
+	}
+}
+
+func TestStyleCodeBlocksLeavesSmallBlocksAtTextWidth(t *testing.T) {
+	small := StyleCodeBlocks(codeMacro("SELECT 1;\nSELECT 2;"))
+	if !strings.Contains(small, `ac:name="wrap"`) {
+		t.Error("wrap must be written on every block, whatever its width")
+	}
+	if strings.Contains(small, "breakout") {
+		t.Errorf("a short block must not break out: %q", small)
+	}
+
+	wide := StyleCodeBlocks(codeMacro(strings.Repeat("q", 200)))
+	if !strings.Contains(wide, `ac:name="breakoutMode"`) {
+		t.Errorf("a long-lined block must break out: %q", wide)
+	}
+	if !strings.Contains(wide, `<ac:parameter ac:name="breakoutWidth">1011</ac:parameter>`) {
+		t.Errorf("want the width capped at 1011: %q", wide)
 	}
 }

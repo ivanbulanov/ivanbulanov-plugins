@@ -2,6 +2,7 @@ package mdpublish
 
 import (
 	"fmt"
+	"math"
 	"strings"
 )
 
@@ -105,11 +106,80 @@ func RestoreHardBreaks(storage string) string {
 	return b.String()
 }
 
-// codeBreakoutWidth is the pixel width Confluence's own editor writes into
-// ac:breakoutWidth when a user sets a code block to the wide breakout: 1011.
-// wrap is what actually stops a long line overflowing its column; breakout
-// only buys the block extra room to use before wrap has to kick in.
-const codeBreakoutWidth = 1011
+// Code-block width constants, measured in the rendered page rather than
+// guessed: Confluence sets code in 14px Atlassian Mono, where every character
+// advances exactly 8.4px (canvas metrics and a DOM Range agree), and the
+// line-number gutter plus left padding occupies 41px. codeBlockChrome adds a
+// right-hand allowance on top of that gutter.
+//
+// These are estimates from one browser at one zoom level, which is precisely
+// why wrap is written unconditionally: an underestimate only makes a block
+// wrap a little sooner, and an overestimate only makes it slightly wide.
+// Neither can bring back the horizontal overflow that wrap exists to prevent.
+const (
+	codeCharWidth    = 8.4
+	codeBlockChrome  = 60
+	codeDefaultWidth = 760
+	codeMaxBreakout  = 1011
+	codeTabColumns   = 4
+)
+
+// codeBlockWidth returns the breakout width a block needs, or 0 when it fits
+// the default content column and should not break out at all. Widening every
+// block to the same size leaves a four-line snippet stretched as wide as a
+// sixty-line schema, which is the disproportion this avoids.
+func codeBlockWidth(body string) int {
+	longest := 0
+	for _, line := range strings.Split(body, "\n") {
+		if n := displayColumns(line); n > longest {
+			longest = n
+		}
+	}
+	if longest == 0 {
+		return 0
+	}
+	needed := codeBlockChrome + int(math.Ceil(float64(longest)*codeCharWidth))
+	if needed <= codeDefaultWidth {
+		return 0
+	}
+	if needed > codeMaxBreakout {
+		return codeMaxBreakout
+	}
+	return needed
+}
+
+// displayColumns counts a line in rendered columns rather than runes, so a
+// tab-indented block is not measured as narrower than it draws.
+func displayColumns(line string) int {
+	cols := 0
+	for _, r := range line {
+		if r == '\t' {
+			cols += codeTabColumns - cols%codeTabColumns
+			continue
+		}
+		cols++
+	}
+	return cols
+}
+
+// codeBlockBody returns the literal source inside the next plain-text body.
+func codeBlockBody(after string) string {
+	start := strings.Index(after, "<ac:plain-text-body>")
+	if start < 0 {
+		return ""
+	}
+	body := after[start+len("<ac:plain-text-body>"):]
+	if end := strings.Index(body, "</ac:plain-text-body>"); end >= 0 {
+		body = body[:end]
+	}
+	if open := strings.Index(body, "<![CDATA["); open >= 0 {
+		body = body[open+len("<![CDATA["):]
+		if close := strings.LastIndex(body, "]]>"); close >= 0 {
+			body = body[:close]
+		}
+	}
+	return body
+}
 
 // StyleCodeBlocks turns on word-wrap and the wide breakout for every code
 // macro Confluence's Markdown converter emits, matching the parameters
@@ -178,14 +248,26 @@ func codeBlockParams(after string) string {
 	existing := after[:boundary]
 
 	var params strings.Builder
+	// wrap is unconditional. It is the guarantee that no line overflows,
+	// whatever width the block settles at; the width below is only an
+	// optimisation on top of it, and is derived from an estimate.
 	if !strings.Contains(existing, `ac:name="wrap"`) {
 		params.WriteString(`<ac:parameter ac:name="wrap">true</ac:parameter>`)
 	}
+
+	// A block whose longest line already fits the text column keeps the text
+	// column's width, so short snippets sit at the same measure as the prose
+	// around them instead of being stretched to match the widest block.
+	if codeBlockWidth(codeBlockBody(after)) == 0 {
+		return params.String()
+	}
+
 	if !strings.Contains(existing, `ac:name="breakoutMode"`) {
 		params.WriteString(`<ac:parameter ac:name="breakoutMode">wide</ac:parameter>`)
 	}
 	if !strings.Contains(existing, `ac:name="breakoutWidth"`) {
-		fmt.Fprintf(&params, `<ac:parameter ac:name="breakoutWidth">%d</ac:parameter>`, codeBreakoutWidth)
+		fmt.Fprintf(&params, `<ac:parameter ac:name="breakoutWidth">%d</ac:parameter>`,
+			codeBlockWidth(codeBlockBody(after)))
 	}
 	return params.String()
 }
