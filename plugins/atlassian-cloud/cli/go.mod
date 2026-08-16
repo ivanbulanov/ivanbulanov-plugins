@@ -5,6 +5,7 @@ go 1.25.6
 require (
 	github.com/ctreminiom/go-atlassian/v2 v2.10.0
 	github.com/spf13/cobra v1.10.2
+	github.com/yuin/goldmark v1.8.5
 )
 
 require (
