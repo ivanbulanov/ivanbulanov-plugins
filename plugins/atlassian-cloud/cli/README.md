@@ -8,7 +8,9 @@ markdown with progressive disclosure (summary by default, details via flags).
 
 ## Prerequisites
 
-- Go 1.21+
+- Go 1.22+ (matches the `go` directive in `go.mod`)
+- `mmdc` from `@mermaid-js/mermaid-cli` — only for `confluence publish`, and
+  only for documents containing Mermaid fences
 
 ## Build & Test
 
@@ -370,6 +372,7 @@ cli/
 | `ATLASSIAN_CLIENT_ID` | For OAuth2 | OAuth2 app client ID |
 | `ATLASSIAN_CLIENT_SECRET` | For OAuth2 | OAuth2 app client secret |
 | `ATLASSIAN_API_TOKEN` | No | Fallback for `auth token --token` |
+| `MMDC` | No | Path to a pinned `mmdc` binary, overriding the `PATH` lookup |
 | `XDG_CONFIG_HOME` | No | Config base dir (default `~/.config`) |
 
 Both `ATLASSIAN_CLIENT_ID` and `ATLASSIAN_CLIENT_SECRET` must be set for

@@ -1,6 +1,6 @@
 module github.com/ivanbulanov/ivanbulanov-plugins/plugins/atlassian-cloud/cli
 
-go 1.25.6
+go 1.22
 
 require (
 	github.com/ctreminiom/go-atlassian/v2 v2.10.0
