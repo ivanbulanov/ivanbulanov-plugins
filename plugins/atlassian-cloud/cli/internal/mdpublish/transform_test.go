@@ -108,6 +108,54 @@ func TestTransformReplacesMermaidFences(t *testing.T) {
 	if strings.Contains(got.Markdown, "sequenceDiagram") {
 		t.Errorf("fence body survived into the markdown")
 	}
+	// The fence markers must go too. A leftover "```mermaid" is not a valid
+	// closing fence, so it opens a code block that swallows the rest of the
+	// document — three whole sections vanished from a real page this way.
+	if strings.Contains(got.Markdown, "```") {
+		t.Errorf("fence markers survived into the markdown: %q", got.Markdown)
+	}
+}
+
+// Two adjacent diagrams are the case that broke a real publish: the leftover
+// opener of the first fence ran on until the *second* fence line, so every
+// heading in between was absorbed into a code block.
+func TestTransformReplacesConsecutiveMermaidFences(t *testing.T) {
+	src := "```mermaid\ngraph TD\n  A-->B\n```\n\n## 6. Middle\n\n```mermaid\ngraph TD\n  C-->D\n```\n\n## 7. After\n"
+	got := transform(t, src)
+
+	if len(got.Placeholders) != 2 {
+		t.Fatalf("got %d placeholders, want 2", len(got.Placeholders))
+	}
+	if strings.Contains(got.Markdown, "```") {
+		t.Errorf("fence markers survived: %q", got.Markdown)
+	}
+	for _, heading := range []string{"## 6. Middle", "## 7. After"} {
+		if !strings.Contains(got.Markdown, heading) {
+			t.Errorf("heading %q was swallowed: %q", heading, got.Markdown)
+		}
+	}
+	// Each placeholder must stand alone as a paragraph, or it will not convert
+	// to its own <p> and the image splice will not find it.
+	for _, ph := range got.Placeholders {
+		if !strings.Contains(got.Markdown, "\n\n"+ph.Key+"\n\n") {
+			t.Errorf("placeholder %s is not its own paragraph: %q", ph.Key, got.Markdown)
+		}
+	}
+}
+
+func TestTransformReplacesEmptyMermaidFence(t *testing.T) {
+	// An empty fence has no body lines at all; reading line zero of an empty
+	// span panics.
+	got := transform(t, "before\n\n```mermaid\n```\n\nafter\n")
+	if len(got.Placeholders) != 1 {
+		t.Fatalf("got %d placeholders, want 1", len(got.Placeholders))
+	}
+	if strings.Contains(got.Markdown, "```") {
+		t.Errorf("fence markers survived: %q", got.Markdown)
+	}
+	if !strings.Contains(got.Markdown, "before") || !strings.Contains(got.Markdown, "after") {
+		t.Errorf("surrounding text lost: %q", got.Markdown)
+	}
 }
 
 func TestTransformReplacesLocalImages(t *testing.T) {

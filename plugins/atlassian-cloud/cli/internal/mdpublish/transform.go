@@ -183,13 +183,48 @@ func blockRange(n ast.Node, src []byte) (int, int) {
 }
 
 func fenceRange(n *ast.FencedCodeBlock, src []byte) (int, int) {
-	start, end := blockRange(n, src)
-	// blockRange covers the fence body; extend over the closing fence line.
-	for end < len(src) && src[end] != '\n' {
-		end++
+	// goldmark's Lines() span only the fence body, so the opening and closing
+	// fence lines have to be taken explicitly. Leaving the opening line behind
+	// is not a harmless cosmetic bug: "```mermaid" is not a valid closing
+	// fence, so the leftover opener starts a code block that swallows every
+	// heading until the next bare fence.
+	start := 0
+	switch {
+	case n.Info != nil:
+		start = n.Info.Segment.Start
+	case n.Lines().Len() > 0:
+		start = n.Lines().At(0).Start
 	}
-	if end < len(src) {
-		end++
+	for start > 0 && src[start-1] != '\n' {
+		start--
+	}
+
+	// Walk whole lines from the opening fence until the closing fence line.
+	// Counting lines rather than trusting the body's end offset keeps this
+	// correct whether or not a line segment includes its newline, and handles
+	// a fence with no body at all. The range stops just before the closing
+	// fence's newline: that newline is half of the blank line separating the
+	// block from what follows, and eating it would glue the replacement
+	// placeholder onto the next paragraph instead of leaving it standing
+	// alone, which in turn stops it converting to its own <p>.
+	end := start
+	opened := false
+	for end < len(src) {
+		lineStart := end
+		lineEnd := lineStart
+		for lineEnd < len(src) && src[lineEnd] != '\n' {
+			lineEnd++
+		}
+		line := strings.TrimSpace(string(src[lineStart:lineEnd]))
+		isFence := strings.HasPrefix(line, "```") || strings.HasPrefix(line, "~~~")
+		if opened && isFence {
+			return start, lineEnd
+		}
+		opened = opened || isFence
+		end = lineEnd
+		if end < len(src) {
+			end++
+		}
 	}
 	return start, end
 }
