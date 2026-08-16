@@ -4,9 +4,11 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -72,7 +74,107 @@ func ShouldSkip(current PageState, newADF []byte) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return currentText == newText, nil
+	if currentText != newText {
+		return false, nil
+	}
+	// Text alone cannot see a formatting change. Code-block wrapping, diagram
+	// dimensions and breakout width all leave the text byte-identical, so a
+	// text-only comparison reports "no change" and a rendering fix can never
+	// reach the page. Compare the structure the tool controls as well.
+	currentShape, err := StructuralFingerprint(current.ADF)
+	if err != nil {
+		return false, err
+	}
+	newShape, err := StructuralFingerprint(newADF)
+	if err != nil {
+		return false, err
+	}
+	return currentShape == newShape, nil
+}
+
+// fingerprintAttrs are the attributes the publish pipeline controls. This is an
+// allowlist rather than a denylist on purpose: Confluence stamps generated
+// identifiers into its own output (macroId, localId, media ids), and a field it
+// starts generating tomorrow must not make every run look like a change.
+var fingerprintAttrs = map[string]bool{
+	"level": true, "language": true, "wrap": true, "mode": true,
+	"width": true, "height": true, "layout": true, "widthType": true,
+	"alt": true, "href": true, "extensionKey": true,
+	"order": true, "panelType": true, "url": true,
+}
+
+// converterOnlyAttrs are added when storage is converted to a document but are
+// absent from the same document read back off the page. Including any of them
+// would make every run differ from the page it just wrote, so the no-op guard
+// would never skip. "alt" carries the attachment's identity on both sides and
+// is content-addressed, so a changed diagram still registers as a change.
+var converterOnlyAttrs = map[string]bool{
+	"__fileName": true, "__fileSize": true, "__fileMimeType": true,
+}
+
+// StructuralFingerprint reduces a document to the shape this tool is
+// responsible for: node types in document order, each with its marks and the
+// attributes above. It deliberately ignores text, which ShouldSkip compares
+// separately, and every identifier Confluence generates for itself.
+func StructuralFingerprint(adf []byte) (string, error) {
+	var doc any
+	if err := json.Unmarshal(adf, &doc); err != nil {
+		return "", fmt.Errorf("parse document: %w", err)
+	}
+	var b strings.Builder
+	writeShape(&b, doc)
+	sum := sha256.Sum256([]byte(b.String()))
+	return hex.EncodeToString(sum[:]), nil
+}
+
+func writeShape(b *strings.Builder, node any) {
+	switch n := node.(type) {
+	case []any:
+		for _, child := range n {
+			writeShape(b, child)
+		}
+	case map[string]any:
+		kind, named := n["type"].(string)
+		if named {
+			b.WriteString("<")
+			b.WriteString(kind)
+			writeShapeAttrs(b, n["attrs"])
+			if marks, ok := n["marks"].([]any); ok {
+				for _, m := range marks {
+					mark, ok := m.(map[string]any)
+					if !ok {
+						continue
+					}
+					if markType, ok := mark["type"].(string); ok {
+						b.WriteString("@")
+						b.WriteString(markType)
+						writeShapeAttrs(b, mark["attrs"])
+					}
+				}
+			}
+		}
+		writeShape(b, n["content"])
+		if named {
+			b.WriteString(">")
+		}
+	}
+}
+
+func writeShapeAttrs(b *strings.Builder, attrs any) {
+	m, ok := attrs.(map[string]any)
+	if !ok {
+		return
+	}
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		if fingerprintAttrs[k] && !converterOnlyAttrs[k] {
+			keys = append(keys, k)
+		}
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		fmt.Fprintf(b, " %s=%v", k, m[k])
+	}
 }
 
 // SourceHash identifies the revision of the document being published.
@@ -170,15 +272,17 @@ func Prepare(ctx context.Context, conv Converter, opts Options) (Result, []byte,
 
 	filenames := map[string]string{}
 	widths := map[string]int{}
+	heights := map[string]int{}
 	for i, ph := range transformed.Placeholders {
 		switch ph.Kind {
 		case "mermaid":
-			path, width, err := RenderMermaid(ctx, ph.Source, opts.AssetsDir, DiagramSlug(i, ""))
+			path, width, height, err := RenderMermaid(ctx, ph.Source, opts.AssetsDir, DiagramSlug(i, ""))
 			if err != nil {
 				return result, nil, err
 			}
 			filenames[ph.Key] = filepath.Base(path)
 			widths[ph.Key] = width
+			heights[ph.Key] = height
 			result.Assets = append(result.Assets, path)
 		case "image":
 			path := ph.Source
@@ -196,7 +300,8 @@ func Prepare(ctx context.Context, conv Converter, opts Options) (Result, []byte,
 	}
 	storage = SpliceTOC(storage)
 	storage = RestoreHardBreaks(storage)
-	storage, err = SpliceImages(storage, filenames, widths)
+	storage = StyleCodeBlocks(storage)
+	storage, err = SpliceImages(storage, filenames, widths, heights)
 	if err != nil {
 		return result, nil, err
 	}

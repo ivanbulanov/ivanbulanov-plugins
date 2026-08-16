@@ -146,7 +146,9 @@ func runConfluencePublish(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	if skip {
+	// --force means publish anyway: it is the escape hatch when the page and
+	// the document agree but the page still needs rewriting.
+	if skip && !publishForce {
 		fmt.Println("no change; the page already says this")
 		return nil
 	}
