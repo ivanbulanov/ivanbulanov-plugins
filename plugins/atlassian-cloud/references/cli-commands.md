@@ -107,6 +107,13 @@ Documents containing Mermaid fences also need `mmdc` from
 never installs it, and diagram source is rendered locally — it is never sent
 to a hosted renderer.
 
+Rendered diagrams land in `--assets-dir`, which defaults to the source
+document's own directory. Filenames carry a hash of the diagram source, so
+republishing an unchanged document re-uses them; editing a diagram writes a new
+file and uploads a new attachment, and neither the old file nor the old
+attachment is removed. Point `--assets-dir` somewhere disposable if the
+document lives in a repository where that clutter matters.
+
 ## Environment Variables
 
 | Variable | Purpose |

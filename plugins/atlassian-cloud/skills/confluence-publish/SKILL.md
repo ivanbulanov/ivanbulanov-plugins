@@ -100,4 +100,13 @@ renderer is used.
 - Never send diagram source to kroki.io, mermaid.ink or any other host.
 - Never read heading anchors from the REST API's `view` or `export_view`
   bodies; they are a different, wrong scheme. See
-  `references/anchors-and-limits.md`.
+  `${CLAUDE_SKILL_DIR}/references/anchors-and-limits.md`.
+
+## Diagram files accumulate
+
+Rendered diagrams are content-addressed, so republishing an unchanged
+document re-uses them. Editing a diagram produces a new file and a new
+attachment, and **the superseded ones are not removed** — neither the SVG in
+`--assets-dir` nor the attachment on the page. Nothing breaks; the page keeps
+showing the current diagram. If the user cares about the clutter, point it out
+rather than deleting anything yourself.
