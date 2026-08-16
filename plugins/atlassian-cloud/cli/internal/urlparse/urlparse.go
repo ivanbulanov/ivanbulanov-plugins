@@ -7,10 +7,10 @@ import (
 )
 
 var (
-	issueKeyRe      = regexp.MustCompile(`^[A-Z][A-Z0-9]+-\d+$`)
-	jiraBrowseRe    = regexp.MustCompile(`/browse/([A-Z][A-Z0-9]+-\d+)`)
+	issueKeyRe       = regexp.MustCompile(`^[A-Z][A-Z0-9]+-\d+$`)
+	jiraBrowseRe     = regexp.MustCompile(`/browse/([A-Z][A-Z0-9]+-\d+)`)
 	confluencePageRe = regexp.MustCompile(`/wiki/spaces/([^/]+)/pages/(\d+)`)
-	numericRe       = regexp.MustCompile(`^\d+$`)
+	numericRe        = regexp.MustCompile(`^\d+$`)
 )
 
 type JiraRef struct {

@@ -203,9 +203,9 @@ func TestNewClients_UnknownSite(t *testing.T) {
 		DefaultSite: "existing.atlassian.net",
 		Sites: map[string]config.SiteAuth{
 			"existing.atlassian.net": {
-				Method:      config.AuthMethodToken,
-				Email:       "user@example.com",
-				APIToken:    "tok",
+				Method:   config.AuthMethodToken,
+				Email:    "user@example.com",
+				APIToken: "tok",
 			},
 		},
 	})

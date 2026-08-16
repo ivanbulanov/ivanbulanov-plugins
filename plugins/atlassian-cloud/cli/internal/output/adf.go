@@ -243,4 +243,3 @@ func convertTable(sb *strings.Builder, node adfNode) {
 		}
 	}
 }
-
