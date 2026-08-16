@@ -29,6 +29,10 @@ func Execute() {
 		if errors.As(err, &authErr) {
 			os.Exit(auth.ExitCodeAuthRequired)
 		}
+		var refusedErr *refusedError
+		if errors.As(err, &refusedErr) {
+			os.Exit(ExitCodeRefused)
+		}
 		os.Exit(1)
 	}
 }

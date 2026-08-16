@@ -75,3 +75,21 @@ func TestConvertReportsHTTPError(t *testing.T) {
 		t.Fatal("want an error on HTTP 400")
 	}
 }
+
+func TestSpaceKey(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v2/spaces/987654" {
+			t.Errorf("path = %q", r.URL.Path)
+		}
+		_, _ = w.Write([]byte(`{"id":"987654","key":"DOCS","name":"Documentation"}`))
+	}))
+	defer srv.Close()
+
+	got, err := SpaceKey(context.Background(), srv.Client(), srv.URL, "987654")
+	if err != nil {
+		t.Fatalf("SpaceKey: %v", err)
+	}
+	if got != "DOCS" {
+		t.Errorf("key = %q, want DOCS", got)
+	}
+}
