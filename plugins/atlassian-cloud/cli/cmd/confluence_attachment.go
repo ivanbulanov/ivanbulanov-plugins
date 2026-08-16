@@ -85,14 +85,14 @@ func runConfluenceAttachmentDownload(_ *cobra.Command, args []string) error {
 
 	if confDownloadAll {
 		for _, a := range attachments.Results {
-			dlURL := fmt.Sprintf("%s/wiki/rest/api/content/%d/child/attachment/%s/download", clients.ConfluenceBaseURL, pageID, a.ID)
+			dlURL := fmt.Sprintf("%s/rest/api/content/%d/child/attachment/%s/download", clients.ConfluenceRESTBase, pageID, a.ID)
 			targets = append(targets, dlTarget{filename: a.Title, url: dlURL})
 		}
 	} else {
 		found := false
 		for _, a := range attachments.Results {
 			if a.Title == filename {
-				dlURL := fmt.Sprintf("%s/wiki/rest/api/content/%d/child/attachment/%s/download", clients.ConfluenceBaseURL, pageID, a.ID)
+				dlURL := fmt.Sprintf("%s/rest/api/content/%d/child/attachment/%s/download", clients.ConfluenceRESTBase, pageID, a.ID)
 				targets = append(targets, dlTarget{filename: a.Title, url: dlURL})
 				found = true
 				break
@@ -156,7 +156,7 @@ func runConfluenceAttachmentUpload(cmd *cobra.Command, args []string) error {
 
 	for _, path := range args[1:] {
 		title, err := confluence.UploadAttachment(cmd.Context(), clients.HTTPClient,
-			clients.ConfluenceBaseURL, ref.PageID, path)
+			clients.ConfluenceRESTBase, ref.PageID, path)
 		if err != nil {
 			return err
 		}

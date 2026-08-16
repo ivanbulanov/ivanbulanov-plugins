@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	confluence "github.com/ctreminiom/go-atlassian/v2/confluence"
@@ -49,7 +50,13 @@ type Clients struct {
 	ConfluenceV2      *confluencev2.Client
 	JiraBaseURL       string
 	ConfluenceBaseURL string
-	HTTPClient        *http.Client
+	// ConfluenceRESTBase is the prefix for hand-built Confluence requests and
+	// for page URLs. Confluence sits under the /wiki context path on both the
+	// site URL and the OAuth gateway; go-atlassian appends it internally, so
+	// anything bypassing go-atlassian has to append it here. Leaving it off
+	// returns 404 on every endpoint.
+	ConfluenceRESTBase string
+	HTTPClient         *http.Client
 }
 
 // NewClients loads the auth config, resolves the given site (or the default),
@@ -133,12 +140,13 @@ func buildClients(jiraURL, confluenceURL string, configureAuth func(common.Authe
 	configureAuth(confV2.Auth)
 
 	return &Clients{
-		Jira:              jiraClient,
-		ConfluenceV1:      confV1,
-		ConfluenceV2:      confV2,
-		JiraBaseURL:       jiraURL,
-		ConfluenceBaseURL: confluenceURL,
-		HTTPClient:        httpClient,
+		Jira:               jiraClient,
+		ConfluenceV1:       confV1,
+		ConfluenceV2:       confV2,
+		JiraBaseURL:        jiraURL,
+		ConfluenceBaseURL:  confluenceURL,
+		ConfluenceRESTBase: strings.TrimSuffix(confluenceURL, "/") + "/wiki",
+		HTTPClient:         httpClient,
 	}, nil
 }
 
