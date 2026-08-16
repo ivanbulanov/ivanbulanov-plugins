@@ -12,12 +12,12 @@ Access Jira Cloud issues, comments, and search with progressive disclosure for c
 Run once at the start of any operation:
 
 ```bash
-<base-directory>/../../../scripts/setup.sh
+${CLAUDE_PLUGIN_ROOT}/scripts/setup.sh
 ```
 
 This builds the CLI if needed and checks authentication. If it fails with a Go error, guide the user to install Go (`mise install go@latest` or https://go.dev/dl/).
 
-**CLI path**: `<base-directory>/../../../cli/bin/atlassian-cloud` — shown as `atlassian-cloud` in examples below.
+**CLI path**: `${CLAUDE_PLUGIN_ROOT}/cli/bin/atlassian-cloud` — shown as `atlassian-cloud` in examples below.
 
 If already authenticated, proceed to the operation. Otherwise, walk the user through setup.
 
@@ -237,7 +237,7 @@ Structure clearly with headers:
 
 | Error | Action |
 |-------|--------|
-| Exit code 2 | Auth expired → `atlassian-cloud auth login` |
+| Exit code 2 | Auth expired; run `atlassian-cloud auth login` |
 | "issue not found" | Check key format, verify permissions |
 | "cannot connect" | Check network, verify site URL |
 | Build failure | Ensure Go is installed: `go version` |

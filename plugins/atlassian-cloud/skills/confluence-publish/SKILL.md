@@ -19,14 +19,16 @@ space and a title.
 Run once at the start of any operation:
 
 ```bash
-<base-directory>/../../../scripts/setup.sh
+${CLAUDE_PLUGIN_ROOT}/scripts/setup.sh
 ```
 
-This builds the CLI if needed and checks authentication. If it fails with a Go
-error, guide the user to install Go (`mise install go@latest` or
-https://go.dev/dl/).
+This builds the CLI if needed, checks authentication, and reports whether
+`mmdc` is on `PATH`. If it fails with a Go error, guide the user to install Go
+(`mise install go@latest` or https://go.dev/dl/). If it reports `mmdc` missing
+and the document contains Mermaid fences, give the user the install command
+from **Diagrams** below before going any further — never install it yourself.
 
-**CLI path**: `<base-directory>/../../../cli/bin/atlassian-cloud` — shown as
+**CLI path**: `${CLAUDE_PLUGIN_ROOT}/cli/bin/atlassian-cloud` — shown as
 `atlassian-cloud` below.
 
 If not authenticated, follow the **Guided API Token Setup** in the

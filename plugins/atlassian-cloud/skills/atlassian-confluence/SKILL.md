@@ -1,23 +1,29 @@
 ---
 name: atlassian-confluence
-description: Use when the user asks to "read confluence page", "get wiki page", "search confluence", "find in confluence", "look up documentation", or pastes a Confluence URL like "https://company.atlassian.net/wiki/spaces/SPACE/pages/123456/Page+Title". Also triggers when the user mentions Confluence page IDs or asks about company documentation on Confluence.
+description: Use when the user asks to "read confluence page", "get wiki page", "search confluence", "find in confluence", "look up documentation", or pastes a Confluence URL like "https://company.atlassian.net/wiki/spaces/SPACE/pages/123456/Page+Title". Also triggers when the user mentions Confluence page IDs or asks about company documentation on Confluence. This skill only reads — for writing a Markdown document onto a page, use the confluence-publish skill instead, even when the request also pastes a page URL.
 ---
 
 # Confluence Page Operations via atlassian-cloud CLI
 
 Read Confluence Cloud pages and search content with progressive disclosure for context efficiency.
 
+**This skill reads; it does not write.** If the user wants to put a Markdown
+document onto a page — "publish this design", "update the page from this doc",
+"sync the design doc" — stop and use the **confluence-publish** skill, which
+handles cross-reference linking, diagram rendering, and the drift check. Use
+this skill first only to find the page id, then hand over.
+
 ## Setup
 
 Run once at the start of any operation:
 
 ```bash
-<base-directory>/../../../scripts/setup.sh
+${CLAUDE_PLUGIN_ROOT}/scripts/setup.sh
 ```
 
 This builds the CLI if needed and checks authentication. If it fails with a Go error, guide the user to install Go (`mise install go@latest` or https://go.dev/dl/).
 
-**CLI path**: `<base-directory>/../../../cli/bin/atlassian-cloud` — shown as `atlassian-cloud` in examples below.
+**CLI path**: `${CLAUDE_PLUGIN_ROOT}/cli/bin/atlassian-cloud` — shown as `atlassian-cloud` in examples below.
 
 If not authenticated, follow the **Guided API Token Setup** in the atlassian-jira skill — the same auth config covers both Jira and Confluence.
 
@@ -69,7 +75,7 @@ Adds attachment list.
 atlassian-cloud confluence search "deployment runbook" --max 10
 
 # Search within a specific space
-atlassian-cloud confluence search "API documentation" --space WS --max 10
+atlassian-cloud confluence search "API documentation" --space ENG --max 10
 ```
 
 Returns: Title, excerpt, URL for each result.
@@ -125,7 +131,7 @@ Structure with headers:
 ```
 ## Page Title
 
-**Space**: WS | **Version**: 4 | **Updated**: 2026-02-19
+**Space**: ENG | **Version**: 4 | **Updated**: 2026-02-19
 
 ### Content
 [markdown-converted page body]
@@ -139,7 +145,7 @@ Structure with headers:
 
 | Error | Action |
 |-------|--------|
-| Exit code 2 | Auth expired → `atlassian-cloud auth login` |
+| Exit code 2 | Auth expired; run `atlassian-cloud auth login` |
 | "page not found" | Verify page ID, check permissions |
 | "invalid page ID" | Ensure numeric ID extracted from URL |
 

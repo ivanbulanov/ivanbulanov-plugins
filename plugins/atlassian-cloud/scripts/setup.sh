@@ -60,3 +60,18 @@ fi
 
 echo "CLI: $BIN_PATH"
 "$BIN_PATH" auth status 2>&1 || true
+
+# --- Report the Mermaid renderer ---
+
+# Deliberately non-fatal. Only `confluence publish` needs mmdc, and only for
+# documents that contain Mermaid fences, so a missing binary must not block
+# Jira or read-only Confluence work. Reporting it here moves discovery to the
+# front of the workflow instead of leaving it to fail mid-publish. Installing
+# it is the user's decision: this script never fetches it.
+MMDC_BIN="${MMDC:-mmdc}"
+if MMDC_RESOLVED="$(command -v "$MMDC_BIN" 2>/dev/null)"; then
+    echo "mmdc: $MMDC_RESOLVED"
+else
+    echo "mmdc: not found (needed only by 'confluence publish' for Mermaid diagrams;" \
+         "install with 'npm install -g @mermaid-js/mermaid-cli')"
+fi
