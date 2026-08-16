@@ -23,9 +23,15 @@ type Pattern struct {
 
 // Config is what the document says about how to publish it.
 type Config struct {
-	PageURL      string
+	PageURL string
+	// HasTOCMarker records that the document chose where its table of
+	// contents goes. It does not decide whether there is one: a table of
+	// contents is emitted either way, at the top when the document is silent.
 	HasTOCMarker bool
-	Patterns     []Pattern
+	// SuppressTOC turns the table of contents off entirely. Scan never sets
+	// it; the publish command does, from --no-toc.
+	SuppressTOC bool
+	Patterns    []Pattern
 }
 
 // Problem is a construct Confluence cannot represent, with the line to fix.
