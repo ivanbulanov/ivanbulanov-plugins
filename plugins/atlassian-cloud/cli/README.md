@@ -58,6 +58,13 @@ OAuth2 tokens refresh automatically when `ATLASSIAN_CLIENT_ID` and
 `ATLASSIAN_CLIENT_SECRET` are available. Refresh happens silently when a
 token is within 5 minutes of expiry.
 
+**`confluence publish` writes to a page**, which needs the
+`write:confluence-content` scope, and uploads its diagrams, which needs
+`write:confluence-file`. Both are in the requested scope list. Anyone who
+authorised before they were added holds a token without them, and the API
+answers 403 until they run `auth login` again. API-token users need no
+change: the token carries the user's own permissions.
+
 ### Checking Status
 
 ```bash
@@ -86,6 +93,8 @@ stderr. There is no JSON mode.
 | `0` | Success |
 | `1` | General error |
 | `2` | Authentication required — run `auth login` or `auth token` |
+| `3` | `confluence publish` only: refused before writing anything |
+| `4` | `confluence publish` only: published, but verification failed |
 
 ### Command Tree
 
@@ -107,7 +116,10 @@ atlassian-cloud [--site <site>]
 └── confluence
     ├── page get <id|url>  [--body] [--attachments]
     ├── search <query>  [--space] [--max]
-    └── attachment download <id|url> [filename]  [--all] [--output-dir]
+    ├── publish <file.md>  [--page] [--title] [--assets-dir] [--link-refs] [--no-toc] [--dry-run] [--force]
+    └── attachment
+        ├── download <id|url> [filename]  [--all] [--output-dir]
+        └── upload <id|url> <file>...
 ```
 
 ### `jira issue get`
@@ -229,6 +241,42 @@ space key are escaped automatically.
 **Output:** `**Found N results** (showing M)` followed by a bullet list
 with title, excerpt, and URL per result.
 
+### `confluence publish`
+
+Publish a Markdown file to an existing Confluence page: conversion runs
+through Confluence's own `contentbody/convert` endpoint, cross-references
+become anchored deep links, Mermaid fenced code blocks are rendered locally
+with `mmdc` and uploaded as attachments, and a table of contents is spliced
+in by default. **This command does not create pages** — the target page must
+already exist.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--page` | string | `""` | Target page id or URL. Falls back to a `<!-- confluence-page: id-or-url -->` comment in the document if omitted |
+| `--title` | string | `""` | Set the page title |
+| `--assets-dir` | string | source document's directory | Where rendered diagrams and the dry-run storage dump are written |
+| `--link-refs` | string | `"all"` | Link cross-references: `all` or `none` |
+| `--no-toc` | bool | `false` | Do not insert a table of contents. One is inserted by default; a `<!-- confluence-toc -->` comment only chooses where it goes, not whether it appears |
+| `--dry-run` | bool | `false` | Generate and check, publish nothing |
+| `--force` | bool | `false` | Publish over a page this tool did not last write |
+
+Mermaid rendering needs `mmdc` from `@mermaid-js/mermaid-cli`, installed
+separately by the user — the CLI never installs or downloads it. Set `MMDC`
+to point at a specific binary. Diagram source is sent only to the target
+Confluence site; no hosted renderer is used.
+
+**Exit codes:** `0` success, `1` error, `2` authentication required, `3`
+refused before writing anything (unsupported construct, unresolved
+cross-reference, the page changed since the last publish, and similar), `4`
+published but a post-publish verification check failed.
+
+**Output:** On `--dry-run`, a summary line (references linked, tables
+hoisted, links unwrapped) and the path of the written storage dump. On a
+real publish, a summary line (references linked, tables hoisted, attachments
+uploaded) followed by a verification line (same-page links checked, broken
+count). When nothing would change, `no change; the page already says this`
+and nothing is written.
+
 ### `confluence attachment download`
 
 Download attachments from a Confluence page. Same interface as
@@ -244,6 +292,14 @@ When `--output-dir` is omitted, files are saved to
 
 **Output:** One absolute file path per line to stdout.
 
+### `confluence attachment upload`
+
+Upload one or more local files as attachments to a Confluence page. No
+flags beyond the global `--site`.
+
+**Output:** One attachment filename per line to stdout, as each upload
+completes.
+
 ## Architecture
 
 ```
@@ -257,7 +313,8 @@ cli/
 │   ├── jira_fields.go            jira fields list
 │   ├── jira_attachment.go        jira attachment download
 │   ├── confluence_page.go        confluence page get, confluence search
-│   ├── confluence_attachment.go  confluence attachment download
+│   ├── confluence_attachment.go  confluence attachment download/upload
+│   ├── confluence_publish.go     confluence publish
 │   └── cmd_test.go               tests for resolveSite, escapeCQL, ExtractAttachments
 ├── internal/
 │   ├── auth/
@@ -271,8 +328,12 @@ cli/
 │   │   └── download_test.go
 │   ├── output/
 │   │   └── ...                   ADF-to-markdown, issue/page/comment formatting
-│   └── urlparse/
-│       └── ...                   ParseJiraRef, ParseConfluenceRef
+│   ├── urlparse/
+│   │   └── ...                   ParseJiraRef, ParseConfluenceRef
+│   ├── confluence/
+│   │   └── ...                   contentbody/convert calls, attachment upload/listing
+│   └── mdpublish/
+│       └── ...                   anchor derivation, source rewriting, splicing, verification
 ├── go.mod
 └── go.sum
 ```

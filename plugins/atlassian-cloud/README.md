@@ -5,7 +5,7 @@ Context-efficient Jira and Confluence Cloud access for Claude Code via a Go CLI 
 ## Features
 
 - **Jira**: Issue lookup (by key or URL), JQL search, comments (read & write), custom field discovery
-- **Confluence**: Page reading (by ID or URL), full-text search with CQL
+- **Confluence**: Page reading (by ID or URL), full-text search with CQL, publishing a Markdown document to an existing page (cross-references become deep links, Mermaid diagrams are rendered and embedded, attachment upload)
 - **Authentication**: OAuth2 3LO with automatic token renewal, API token fallback
 - **Progressive disclosure**: Compact summaries by default, escalate to full details on demand
 - **ADF conversion**: Atlassian Document Format converted to clean markdown
@@ -90,6 +90,8 @@ Just talk to Claude naturally — the skills trigger automatically.
 - Paste a Confluence URL: `https://acme.atlassian.net/wiki/spaces/ENG/pages/123456/Page`
 - Search: "Search Confluence for the deployment runbook"
 - Read: "Get the full content of Confluence page 123456"
+- Publish: "Publish design.md to Confluence page 123456" (dry-run first; the
+  target page must already exist)
 
 ### Progressive disclosure
 

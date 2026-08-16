@@ -70,7 +70,9 @@
 |---------|-------------|
 | `confluence page get <id\|url>` | Get page details |
 | `confluence search <query>` | Search with CQL |
+| `confluence publish <file.md>` | Publish a Markdown document to an existing page |
 | `confluence attachment download <id\|url> [filename]` | Download attachments |
+| `confluence attachment upload <id\|url> <file>...` | Upload files as attachments |
 
 ### Page Get Flags
 
@@ -86,6 +88,20 @@
 | `--space` | (all) | Limit to space key |
 | `--max` | 10 | Max results |
 
+### Publish Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--page` | (none) | Target page id or URL |
+| `--title` | (none) | Set the page title |
+| `--assets-dir` | source document's directory | Where rendered diagrams go |
+| `--link-refs` | `all` | Link cross-references: `all` or `none` |
+| `--no-toc` | false | Do not insert a table of contents (one is inserted by default) |
+| `--dry-run` | false | Generate and check, publish nothing |
+| `--force` | false | Publish over a page this tool did not last write |
+
+The target page must already exist; this command does not create pages.
+
 ### Confluence Attachment Download Flags
 
 | Flag | Description |
@@ -100,3 +116,5 @@
 | 0 | Success |
 | 1 | General error |
 | 2 | Authentication required |
+| 3 | `confluence publish` refused before writing anything |
+| 4 | `confluence publish` published, but verification failed |
