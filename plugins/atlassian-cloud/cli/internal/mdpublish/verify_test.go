@@ -26,6 +26,21 @@ func TestCheckPreflightPassesWhenTextMatches(t *testing.T) {
 	}
 }
 
+// SpliceTOC and SpliceImages both replace a marker with a node that carries no
+// text, so neither may be reported as a text difference.
+func TestCheckPreflightIgnoresSplicedMarkers(t *testing.T) {
+	before := adfDoc(TOCMarker+"Intro", "@@ph0@@Body")
+	after := adfDoc("Intro", "Body")
+
+	got, err := CheckPreflight(before, after, []Placeholder{{Key: "@@ph0@@", Kind: "mermaid"}})
+	if err != nil {
+		t.Fatalf("CheckPreflight: %v", err)
+	}
+	if got.TextDiff != "" {
+		t.Errorf("TextDiff = %q, want none", got.TextDiff)
+	}
+}
+
 func TestCheckPreflightCatchesTextCorruption(t *testing.T) {
 	// This is the failure the prototype shipped: a heading mangled by a
 	// string rewrite, invisible to link checking.

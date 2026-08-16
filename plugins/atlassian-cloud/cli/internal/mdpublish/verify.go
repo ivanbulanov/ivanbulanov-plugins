@@ -58,6 +58,11 @@ func CheckPreflight(before, after []byte, placeholders []Placeholder) (Preflight
 	if err != nil {
 		return p, err
 	}
+	// Splicing swaps each marker for a node that carries no text: the images
+	// for <ac:image>, the table-of-contents marker for the toc macro. Both
+	// have to come out of the comparison, or the check reports a difference
+	// the splice was supposed to make.
+	beforeText = strings.ReplaceAll(beforeText, TOCMarker, "")
 	for _, ph := range placeholders {
 		beforeText = strings.ReplaceAll(beforeText, ph.Key, "")
 	}
