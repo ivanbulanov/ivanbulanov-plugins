@@ -34,7 +34,7 @@
     },
     {
       "name": "atlassian-cloud",
-      "description": "Context-efficient Jira and Confluence Cloud access via Go CLI with OAuth2, progressive disclosure, and ADF-to-markdown conversion",
+      "description": "Context-efficient Jira and Confluence Cloud access via Go CLI with OAuth2 authentication, progressive disclosure, ADF-to-markdown conversion, and Markdown-to-Confluence publishing with locally rendered Mermaid diagrams",
       "version": "0.3.0",
       "author": {
         "name": "Ivan Bulanov",
@@ -42,8 +42,8 @@
       },
       "source": "./plugins/atlassian-cloud",
       "category": "productivity",
-      "homepage": "https://github.com/ivanbulanov/ivanbulanov-plugins",
-      "keywords": ["jira", "confluence", "atlassian", "oauth2", "cloud"]
+      "homepage": "https://github.com/ivanbulanov/ivanbulanov-plugins/tree/master/plugins/atlassian-cloud",
+      "keywords": ["jira", "confluence", "atlassian", "oauth2", "cloud", "markdown", "mermaid", "publishing"]
     }
   ]
 }

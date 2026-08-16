@@ -102,6 +102,21 @@
 
 The target page must already exist; this command does not create pages.
 
+Documents containing Mermaid fences also need `mmdc` from
+`@mermaid-js/mermaid-cli` on `PATH`, or `MMDC` set to its location. The CLI
+never installs it, and diagram source is rendered locally — it is never sent
+to a hosted renderer.
+
+## Environment Variables
+
+| Variable | Purpose |
+|----------|---------|
+| `ATLASSIAN_CLIENT_ID` | OAuth2 app client ID (required for `auth login`) |
+| `ATLASSIAN_CLIENT_SECRET` | OAuth2 app client secret (required for `auth login`) |
+| `ATLASSIAN_API_TOKEN` | Fallback for `auth token --token` |
+| `MMDC` | Path to a pinned `mmdc` binary, overriding the `PATH` lookup |
+| `XDG_CONFIG_HOME` | Config base directory (default `~/.config`) |
+
 ### Confluence Attachment Download Flags
 
 | Flag | Description |

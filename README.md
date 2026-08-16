@@ -6,7 +6,7 @@ A collection of Claude Code plugins for productivity and integrations.
 
 | Plugin | Description | Category |
 |--------|-------------|----------|
-| [atlassian-cloud](./plugins/atlassian-cloud) | Jira and Confluence Cloud access via Go CLI with OAuth2, progressive disclosure, and ADF-to-markdown conversion | Productivity |
+| [atlassian-cloud](./plugins/atlassian-cloud) | Jira and Confluence Cloud access via Go CLI with OAuth2, progressive disclosure, ADF-to-markdown conversion, and Markdown-to-Confluence publishing with locally rendered Mermaid diagrams | Productivity |
 | [redis-reader](./plugins/redis-reader) | Read-only Redis querying with command allowlisting, output size control, and cluster support | Productivity |
 
 <details>

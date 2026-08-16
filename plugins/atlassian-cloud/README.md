@@ -13,8 +13,12 @@ Context-efficient Jira and Confluence Cloud access for Claude Code via a Go CLI 
 
 ## Requirements
 
-- Go 1.21+ (or [mise](https://mise.jdx.dev) to install it automatically)
+- Go 1.22+ (or [mise](https://mise.jdx.dev) to install it automatically)
 - Atlassian Cloud account
+- `mmdc` from [`@mermaid-js/mermaid-cli`](https://github.com/mermaid-js/mermaid-cli)
+  — only for `confluence publish`, and only if the document contains Mermaid
+  diagrams. Install it yourself with `npm install -g @mermaid-js/mermaid-cli`;
+  the plugin never installs or downloads it.
 
 ## Setup
 
@@ -43,7 +47,7 @@ go build -o bin/atlassian-cloud .
 
 1. Create an OAuth app at https://developer.atlassian.com/console/myapps/
 2. Set callback URL to `http://localhost:19872/callback`
-3. Add required scopes: `read:jira-work`, `write:jira-work`, `read:jira-user`, `read:confluence-content.all`, `read:confluence-space.summary`, `offline_access`
+3. Add required scopes: `read:jira-work`, `write:jira-work`, `read:jira-user`, `read:confluence-content.all`, `read:confluence-space.summary`, `write:confluence-content`, `write:confluence-file`, `offline_access`
 4. Set environment variables:
    ```bash
    export ATLASSIAN_CLIENT_ID=your-client-id
