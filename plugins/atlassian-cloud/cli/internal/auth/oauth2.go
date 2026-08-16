@@ -42,6 +42,11 @@ func LoadOAuthConfigFromEnv() *common.OAuth2Config {
 		Scopes: []string{
 			"read:jira-work", "write:jira-work", "read:jira-user",
 			"read:confluence-content.all", "read:confluence-space.summary",
+			// Publishing a page needs write:confluence-content, and uploading
+			// its diagrams needs write:confluence-file. Anyone who authorised
+			// before these were added holds a token without them and has to
+			// run `auth login` again; the API answers 403 until they do.
+			"write:confluence-content", "write:confluence-file",
 			"offline_access",
 		},
 	}
