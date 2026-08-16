@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/ivanbulanov/ivanbulanov-plugins/plugins/atlassian-cloud/cli/internal/auth"
+	"github.com/ivanbulanov/ivanbulanov-plugins/plugins/atlassian-cloud/cli/internal/confluence"
 	"github.com/ivanbulanov/ivanbulanov-plugins/plugins/atlassian-cloud/cli/internal/download"
 	"github.com/ivanbulanov/ivanbulanov-plugins/plugins/atlassian-cloud/cli/internal/urlparse"
 )
@@ -35,6 +36,7 @@ var (
 func init() {
 	confluenceCmd.AddCommand(confluenceAttachmentCmd)
 	confluenceAttachmentCmd.AddCommand(confluenceAttachmentDownloadCmd)
+	confluenceAttachmentCmd.AddCommand(confluenceAttachmentUploadCmd)
 
 	confluenceAttachmentDownloadCmd.Flags().BoolVar(&confDownloadAll, "all", false, "Download all attachments")
 	confluenceAttachmentDownloadCmd.Flags().StringVar(&confDownloadOutputDir, "output-dir", "", "Directory to save files (default: OS temp dir)")
@@ -131,5 +133,34 @@ func runConfluenceAttachmentDownload(_ *cobra.Command, args []string) error {
 		fmt.Println(destPath)
 	}
 
+	return nil
+}
+
+var confluenceAttachmentUploadCmd = &cobra.Command{
+	Use:   "upload <page-id-or-url> <file>...",
+	Short: "Upload files as attachments to a Confluence page",
+	Args:  cobra.MinimumNArgs(2),
+	RunE:  runConfluenceAttachmentUpload,
+}
+
+func runConfluenceAttachmentUpload(cmd *cobra.Command, args []string) error {
+	ref, ok := urlparse.ParseConfluenceRef(args[0])
+	if !ok {
+		return fmt.Errorf("invalid page reference: %s", args[0])
+	}
+
+	clients, err := auth.NewClients(resolveSite(ref.Site))
+	if err != nil {
+		return err
+	}
+
+	for _, path := range args[1:] {
+		title, err := confluence.UploadAttachment(cmd.Context(), clients.HTTPClient,
+			clients.ConfluenceBaseURL, ref.PageID, path)
+		if err != nil {
+			return err
+		}
+		fmt.Println(title)
+	}
 	return nil
 }
