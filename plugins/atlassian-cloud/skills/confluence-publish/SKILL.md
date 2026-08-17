@@ -93,6 +93,7 @@ renderer is used.
 | a heading whose text is duplicated | Two headings share text. Ask the user to disambiguate one |
 | not written by this tool | Someone edited the page in Confluence. Show the diff and ask before `--force` |
 | mmdc not found | Give the user the install command above. Never install it yourself |
+| cannot write to … / go build failed | Claude Code's Bash sandbox is blocking the build. `setup.sh` prints the exact `settings.json` entry with the real path filled in — relay it verbatim. Never edit the user's settings yourself |
 
 ## Never
 

@@ -58,25 +58,31 @@ go build -o bin/atlassian-cloud .
 
 ## Sandboxing
 
-Claude Code's Bash sandbox is **off by default**, so no configuration is needed in the common case. If you have enabled the sandbox (`"sandbox": { "enabled": true }` in `settings.json`), the plugin's setup script and CLI need network access that the sandbox otherwise blocks:
+Claude Code's Bash sandbox is **off by default**, so no configuration is needed in the common case. With it enabled, the plugin needs two separate things, and the build needs both of them:
 
-- `scripts/setup.sh` runs `go build`, which fetches modules from the Go module proxy.
-- The CLI makes outbound HTTPS calls to your Atlassian site and the media CDN.
+- **`scripts/setup.sh` runs `go build`**, which writes the binary into the plugin's own installation directory under `~/.claude/plugins/`, writes the Go build and module caches under `~/.cache` and `~/go`, and fetches modules from the module proxy. Sandboxed commands may write only to the working directory and the session temp directory, so all three are blocked.
+- **The CLI itself** makes outbound HTTPS calls to your Atlassian site and the media CDN.
 
-Grant just those hosts — this keeps filesystem isolation intact:
+**A plugin cannot exempt itself.** Sandbox settings are user-side only, in `settings.json`; there is no field in `plugin.json` or in skill frontmatter that relaxes them, and `allowed-tools` governs permission prompts rather than the sandbox. So the configuration below has to be yours.
+
+The build is easiest to handle by running just that one script outside the sandbox. Widening `filesystem.allowWrite` instead means naming three separate locations, and much of `~/.claude` is protected from writes in a way `allowWrite` does not lift:
 
 ```json
 {
   "sandbox": {
-    "allowedDomains": [
-      "proxy.golang.org", "sum.golang.org",
-      "*.atlassian.net", "api.atlassian.com", "api.media.atlassian.com"
-    ]
+    "excludedCommands": [
+      "~/.claude/plugins/cache/ivanbulanov-plugins/atlassian-cloud/*/scripts/setup.sh*"
+    ],
+    "network": {
+      "allowedDomains": [
+        "*.atlassian.net", "api.atlassian.com", "api.media.atlassian.com"
+      ]
+    }
   }
 }
 ```
 
-A plugin cannot declare sandbox exemptions for itself — sandbox configuration is user-side only, in `settings.json`. If you would rather run the commands fully outside the sandbox than allowlist hosts, add them to `sandbox.excludedCommands` instead.
+Only the build escapes the sandbox; the CLI keeps running inside it, which is why its hosts still have to be allowed. If the script fails, run it once by hand — it prints the exact `excludedCommands` entry with your real installation path already filled in, which avoids guessing at the version-number wildcard above.
 
 ## Usage
 

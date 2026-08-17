@@ -16,6 +16,39 @@ if [[ -f "$PLUGIN_JSON" ]]; then
     PLUGIN_VERSION="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$PLUGIN_JSON" | head -n1)"
 fi
 
+# Printed when the build cannot proceed. A plugin cannot grant itself sandbox
+# exemptions — sandbox settings are user-side only — so the most useful thing
+# this script can do is name the exact entry to add, with the real path already
+# filled in. allowWrite is not offered as the first answer: writes under
+# ~/.claude are protected and an allowWrite entry does not lift that, and the
+# build needs the Go caches and the module proxy as well.
+sandbox_help() {
+    cat >&2 <<HELP
+
+ERROR: $1
+
+If Claude Code's Bash sandbox is enabled, this is expected: building writes
+the binary into the plugin directory, writes the Go build and module caches,
+and fetches modules over the network. The plugin cannot exempt itself.
+
+Add this to ~/.claude/settings.json and start a new session:
+
+  "sandbox": {
+    "excludedCommands": ["${SCRIPT_DIR}/setup.sh*"]
+  }
+
+Only this build script then runs outside the sandbox; the CLI itself stays
+inside it. The CLI still needs its own hosts allowed:
+
+  "sandbox": {
+    "network": { "allowedDomains": ["*.atlassian.net", "api.atlassian.com", "api.media.atlassian.com"] }
+  }
+
+If the sandbox is off, this is a plain permissions problem: check that you can
+write to the path above.
+HELP
+}
+
 # --- Ensure binary is built and up to date ---
 
 needs_build=0
@@ -45,9 +78,21 @@ if [[ "$needs_build" -eq 1 ]]; then
         fi
     fi
 
-    mkdir -p "${CLI_DIR}/bin"
+    if ! mkdir -p "${CLI_DIR}/bin" 2>/dev/null || ! touch "${CLI_DIR}/bin/.writable" 2>/dev/null; then
+        sandbox_help "cannot write to ${CLI_DIR}/bin"
+        exit 1
+    fi
+    rm -f "${CLI_DIR}/bin/.writable"
+
     cd "$CLI_DIR"
-    go build -o bin/atlassian-cloud .
+    if ! go build -o bin/atlassian-cloud .; then
+        # go build also writes the module and build caches, which live outside
+        # the plugin, and fetches modules over the network. Any of the three
+        # can be what the sandbox refused, so say so rather than leaving the
+        # user with a bare Go error.
+        sandbox_help "go build failed"
+        exit 1
+    fi
     echo "CLI built successfully." >&2
 
     # Record the version we just built so the next run rebuilds on a version bump.

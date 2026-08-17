@@ -240,7 +240,7 @@ Structure clearly with headers:
 | Exit code 2 | Auth expired; run `atlassian-cloud auth login` |
 | "issue not found" | Check key format, verify permissions |
 | "cannot connect" | Check network, verify site URL |
-| Build failure | Ensure Go is installed: `go version` |
+| Build failure | Ensure Go is installed: `go version`. If the sandbox blocked it, relay the `settings.json` entry `setup.sh` printed; never edit the user's settings yourself |
 
 ## Tips
 

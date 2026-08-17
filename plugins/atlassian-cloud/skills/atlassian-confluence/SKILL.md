@@ -148,6 +148,7 @@ Structure with headers:
 | Exit code 2 | Auth expired; run `atlassian-cloud auth login` |
 | "page not found" | Verify page ID, check permissions |
 | "invalid page ID" | Ensure numeric ID extracted from URL |
+| Build failure | Ensure Go is installed: `go version`. If the sandbox blocked it, relay the `settings.json` entry `setup.sh` printed; never edit the user's settings yourself |
 
 ## Tips
 
