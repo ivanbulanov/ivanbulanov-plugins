@@ -270,3 +270,85 @@ func TestStyleCodeBlocksLeavesSmallBlocksAtTextWidth(t *testing.T) {
 		t.Errorf("want the width capped at 1011: %q", wide)
 	}
 }
+
+func TestCollapseSoftBreaksJoinsWrappedProse(t *testing.T) {
+	in := "<p>This design reuses the function unchanged. That\n" +
+		"function holds most of what the requirement means: the\n" +
+		"table, generation, and the cooldown.</p>"
+	want := "<p>This design reuses the function unchanged. That " +
+		"function holds most of what the requirement means: the " +
+		"table, generation, and the cooldown.</p>"
+	if got := CollapseSoftBreaks(in); got != want {
+		t.Errorf("got  %q\nwant %q", got, want)
+	}
+}
+
+func TestCollapseSoftBreaksKeepsOneHardBreak(t *testing.T) {
+	// The converter has already turned "two trailing spaces" into <br />. The
+	// newline that follows it must not survive as a second break, and must not
+	// leave a space that indents the new line.
+	for _, in := range []string{
+		"<p>Line one.<br />\nLine two.</p>",
+		"<p>Line one.<br/>\nLine two.</p>",
+	} {
+		got := CollapseSoftBreaks(in)
+		if strings.ContainsAny(got, "\n") {
+			t.Errorf("%q: newline survived: %q", in, got)
+		}
+		if strings.Contains(got, "> Line two") {
+			t.Errorf("%q: space indents the broken line: %q", in, got)
+		}
+	}
+}
+
+func TestCollapseSoftBreaksLeavesCodeAlone(t *testing.T) {
+	cases := map[string]string{
+		"code macro":  `<ac:plain-text-body><![CDATA[SELECT a,` + "\n" + `  b FROM t]]></ac:plain-text-body>`,
+		"inline code": "<p>run <code>a\nb</code> now</p>",
+		"pre":         "<pre>one\n  two</pre>",
+	}
+	for name, in := range cases {
+		if got := CollapseSoftBreaks(in); !strings.Contains(got, "\n") {
+			t.Errorf("%s: newline was collapsed inside protected text: %q", name, got)
+		}
+	}
+}
+
+func TestCollapseSoftBreaksDistinguishesInlineFromBlock(t *testing.T) {
+	// Between block tags a newline is layout and is kept, so the generated
+	// storage stays readable. Between inline tags it is text: leaving it there
+	// is the very bug this fixes.
+	block := "<p>one</p>\n<h2>two</h2>"
+	if got := CollapseSoftBreaks(block); got != block {
+		t.Errorf("block boundary rewritten: %q", got)
+	}
+	inline := "<p>some <em>emphasis</em>\n<strong>bold</strong> text</p>"
+	want := "<p>some <em>emphasis</em> <strong>bold</strong> text</p>"
+	if got := CollapseSoftBreaks(inline); got != want {
+		t.Errorf("inline boundary\ngot  %q\nwant %q", got, want)
+	}
+}
+
+func TestCollapseSoftBreaksDoesNotDoubleSpace(t *testing.T) {
+	// A list item's continuation line is indented in the source; that indent
+	// must not survive as a run of spaces mid-sentence.
+	in := "<li><p>A bullet whose text is wrapped in the\n    source across lines.</p></li>"
+	got := CollapseSoftBreaks(in)
+	if strings.Contains(got, "  ") {
+		t.Errorf("indentation became spaces: %q", got)
+	}
+}
+
+func TestCollapseSoftBreaksIsIdempotent(t *testing.T) {
+	for _, in := range []string{
+		"<p>wrapped\nprose</p>\n<h2>head</h2>",
+		"<p>a<br />\nb</p>",
+		"<ac:plain-text-body><![CDATA[x\ny]]></ac:plain-text-body>",
+		"<p>trailing</p>\n",
+	} {
+		once := CollapseSoftBreaks(in)
+		if twice := CollapseSoftBreaks(once); twice != once {
+			t.Errorf("%q: not idempotent\n once %q\ntwice %q", in, once, twice)
+		}
+	}
+}

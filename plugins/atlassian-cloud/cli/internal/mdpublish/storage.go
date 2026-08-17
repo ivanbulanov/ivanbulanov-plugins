@@ -1,6 +1,7 @@
 package mdpublish
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"strings"
@@ -59,34 +60,42 @@ func SpliceImages(storage string, filenames map[string]string, widths, heights m
 	return storage, nil
 }
 
+// Regions of storage whose bytes are content rather than markup: an escaped
+// tag is meant literally there, and a newline is significant. Both of the
+// rewrites below step over them untouched.
+var protectedRegions = [][2]string{
+	{"<code>", "</code>"},
+	{"<pre>", "</pre>"},
+	{"<ac:plain-text-body>", "</ac:plain-text-body>"},
+}
+
+// protectedSpan returns the length of the protected region beginning at
+// storage[i:], or 0 when none begins there. An unclosed region runs to the end
+// rather than being treated as ordinary markup, so malformed input loses no
+// content.
+func protectedSpan(storage string, i int) int {
+	for _, r := range protectedRegions {
+		if !strings.HasPrefix(storage[i:], r[0]) {
+			continue
+		}
+		if end := strings.Index(storage[i:], r[1]); end >= 0 {
+			return end + len(r[1])
+		}
+		return len(storage) - i
+	}
+	return 0
+}
+
 // RestoreHardBreaks turns an escaped <br/> back into a real one, which
-// Confluence converts to an ADF hardBreak. Inside <code> and inside a code
-// macro's body an escaped tag is content, so those regions are skipped.
+// Confluence converts to an ADF hardBreak.
 func RestoreHardBreaks(storage string) string {
 	var b strings.Builder
 	b.Grow(len(storage))
 
-	protectedOpen := []string{"<code>", "<ac:plain-text-body>"}
-	protectedClose := []string{"</code>", "</ac:plain-text-body>"}
-
-	i := 0
-	for i < len(storage) {
-		skipped := false
-		for k, open := range protectedOpen {
-			if strings.HasPrefix(storage[i:], open) {
-				end := strings.Index(storage[i:], protectedClose[k])
-				if end < 0 {
-					end = len(storage) - i
-				} else {
-					end += len(protectedClose[k])
-				}
-				b.WriteString(storage[i : i+end])
-				i += end
-				skipped = true
-				break
-			}
-		}
-		if skipped {
+	for i := 0; i < len(storage); {
+		if n := protectedSpan(storage, i); n > 0 {
+			b.WriteString(storage[i : i+n])
+			i += n
 			continue
 		}
 
@@ -104,6 +113,123 @@ func RestoreHardBreaks(storage string) string {
 	}
 
 	return b.String()
+}
+
+// CollapseSoftBreaks turns the newlines Confluence leaves inside text into
+// single spaces.
+//
+// Markdown says a lone newline inside a paragraph is a space, but Confluence
+// only half agrees: its markdown-to-storage step keeps the source's line
+// breaks as literal newlines inside <p>, and its storage-to-ADF step copies
+// them into the ADF text nodes, where the renderer draws every one as a line
+// break. A document wrapped at 100 columns therefore publishes with a ragged
+// break every 100 characters. This restores the paragraph.
+//
+// A deliberate hard break is unaffected: the converter has already turned it
+// into a <br /> tag, and collapsing the newline that trails the tag is what
+// stops one requested break from rendering as two.
+//
+// Whitespace between two block-level tags is kept exactly as it was: it is
+// insignificant there, and preserving it stops the storage that --dry-run
+// writes out for a human to read from collapsing onto a single line. The test
+// is deliberately one-sided. A tag this does not recognise counts as inline,
+// so the whitespace collapses — harmless between blocks, and necessary between
+// inline tags, where a newline is text and would break the line after all.
+func CollapseSoftBreaks(storage string) string {
+	out := make([]byte, 0, len(storage))
+
+	for i := 0; i < len(storage); {
+		if n := protectedSpan(storage, i); n > 0 {
+			out = append(out, storage[i:i+n]...)
+			i += n
+			continue
+		}
+
+		if c := storage[i]; c != '\n' && c != '\r' {
+			out = append(out, c)
+			i++
+			continue
+		}
+
+		// Take the whole run, the next line's indentation included, so a
+		// rewrapped line does not rejoin with a row of spaces.
+		start := i
+		for i < len(storage) && isASCIISpace(storage[i]) {
+			i++
+		}
+		switch {
+		case i >= len(storage):
+			// Trailing whitespace: nothing follows for it to separate.
+		case isBlockTag(precedingTag(out)) && isBlockTag(followingTag(storage[i:])):
+			out = append(out, storage[start:i]...)
+		case bytes.HasSuffix(out, []byte("<br/>")) || bytes.HasSuffix(out, []byte("<br />")):
+			// A space here would indent the line the author asked to break.
+		case len(out) > 0 && out[len(out)-1] != ' ':
+			out = append(out, ' ')
+		}
+	}
+
+	return string(out)
+}
+
+// Block-level tags in the storage Confluence generates. Whitespace directly
+// around one of these is layout, never content. The list errs towards being
+// short: omitting a tag only costs a newline in the generated file.
+var blockTags = map[string]bool{
+	"p": true, "div": true, "hr": true, "blockquote": true, "pre": true,
+	"h1": true, "h2": true, "h3": true, "h4": true, "h5": true, "h6": true,
+	"ul": true, "ol": true, "li": true,
+	"table": true, "thead": true, "tbody": true, "tfoot": true,
+	"tr": true, "td": true, "th": true, "colgroup": true, "col": true,
+	"ac:structured-macro": true, "ac:parameter": true,
+	"ac:rich-text-body": true, "ac:plain-text-body": true,
+	"ac:layout": true, "ac:layout-section": true, "ac:layout-cell": true,
+	"ac:task-list": true, "ac:task": true,
+}
+
+func isBlockTag(name string) bool { return blockTags[name] }
+
+// precedingTag names the tag that written output ends with, or "" when it does
+// not end with one. The backward scan is bounded: a tag longer than this is
+// not one of the names above.
+func precedingTag(out []byte) string {
+	if len(out) == 0 || out[len(out)-1] != '>' {
+		return ""
+	}
+	start := len(out) - 1
+	for limit := 0; start > 0 && limit < maxTagLen; limit++ {
+		start--
+		if out[start] == '<' {
+			return tagName(string(out[start:]))
+		}
+	}
+	return ""
+}
+
+// followingTag names the tag that rest begins with, or "" when it does not
+// begin with one.
+func followingTag(rest string) string {
+	if !strings.HasPrefix(rest, "<") {
+		return ""
+	}
+	return tagName(rest)
+}
+
+const maxTagLen = 64
+
+// tagName reads the element name out of a tag, ignoring whether it opens or
+// closes and ignoring any attributes.
+func tagName(tag string) string {
+	name := strings.TrimPrefix(tag[1:], "/")
+	end := strings.IndexAny(name, " \t\r\n/>")
+	if end < 0 {
+		return ""
+	}
+	return name[:end]
+}
+
+func isASCIISpace(c byte) bool {
+	return c == ' ' || c == '\t' || c == '\n' || c == '\r'
 }
 
 // Code-block width constants, measured in the rendered page rather than

@@ -198,7 +198,10 @@ func markdownToADF(ctx context.Context, conv Converter, markdown string) ([]byte
 	if err != nil {
 		return nil, err
 	}
-	return conv.StorageToADF(ctx, storage, "")
+	// Collapsed here as well as in Prepare: the preflight check demands the
+	// two ADFs be byte-identical once placeholders are removed, so both sides
+	// have to see the same whitespace.
+	return conv.StorageToADF(ctx, CollapseSoftBreaks(storage), "")
 }
 
 // Prepare runs every step up to the point of writing: reject, transform, learn
@@ -298,6 +301,9 @@ func Prepare(ctx context.Context, conv Converter, opts Options) (Result, []byte,
 	if err != nil {
 		return result, nil, err
 	}
+	// Before any splicing, so the macros spliced in below keep the line breaks
+	// that make the generated storage readable.
+	storage = CollapseSoftBreaks(storage)
 	storage = SpliceTOC(storage)
 	storage = RestoreHardBreaks(storage)
 	storage = StyleCodeBlocks(storage)
