@@ -1,6 +1,6 @@
 {
   "name": "atlassian-cloud",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Context-efficient Jira and Confluence Cloud access via Go CLI with OAuth2 authentication, progressive disclosure, ADF-to-markdown conversion, and Markdown-to-Confluence publishing with locally rendered Mermaid diagrams",
   "author": {
     "name": "Ivan Bulanov",
